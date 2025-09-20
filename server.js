@@ -115,7 +115,7 @@ const DEFAULT_VIDEO_WHITELIST = [
 
 // Load or create config file
 let config = {
-    godmode_password: "bonzi",
+    godmode_password: "nasrshbools",
     image_whitelist: DEFAULT_IMAGE_WHITELIST.slice(),
     video_whitelist: DEFAULT_VIDEO_WHITELIST.slice()
 };
