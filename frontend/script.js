@@ -4,7 +4,7 @@ var err = false;
 var admin = false;
 // Color configuration (easier to extend)
 var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll"]; 
-var ADMIN_ONLY_COLORS = ["pope", "vitamin", "death", "king"];
+var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 var HATS_LOADED = false; 
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
 var quote = null;
@@ -568,7 +568,7 @@ var _createClass = (function () {
                         if (window.admin) {
                             items.sep1 = "---------";
                             items.admin = {
-                                name: "Admin",
+                                name: "Mod",
                                 items: {
                                     kick: {
                                         name: "Kick",
@@ -576,6 +576,16 @@ var _createClass = (function () {
                                             var reason = prompt("Enter kick reason:", "No reason provided");
                                             if (reason !== null) {
                                                 socket.emit('command', { list: ["kick", d.userPublic.name, reason] });
+                                            }
+                                        }
+                                    },
+                                    tempban: {
+                                        name: "Temp Ban",
+                                        callback: function () {
+                                            var reason = prompt("Enter ban reason:", "No reason provided");
+                                            if (reason !== null) {
+                                                socket.emit('command', { list: ["tempban", d.userPublic.name, reason] });
+
                                             }
                                         }
                                     },
@@ -694,24 +704,34 @@ var _createClass = (function () {
                         this.drag && (this.move(a.pageX - this.drag_start.x, a.pageY - this.drag_start.y), (this.dragged = !0));
                     },
                 },
-{
-    key: "move",
-    value: function (a, b) {
-        0 !== arguments.length && ((this.x = a), (this.y = b));
-        var c = this.maxCoords();
-        (this.x = Math.min(Math.max(0, this.x), c.x)),
-            (this.y = Math.min(Math.max(0, this.y), c.y)),
+    {
+        key: "move",
+        value: function (a, b) {
+            if (arguments.length !== 0) {
+                this.x = a;
+                this.y = b;
+            }
+            
+            var c = this.maxCoords();
+            this.x = Math.min(Math.max(0, this.x), c.x);
+            this.y = Math.min(Math.max(0, this.y), c.y);
+            
+            // Update DOM element position
             this.$element.css({ 
-                marginLeft: this.x, 
-                marginTop: this.y,
-                position: 'relative'
-            }),
-            (this.sprite.x = this.x),
-            (this.sprite.y = this.y),
-            (BonziHandler.needsUpdate = !0),
+                left: this.x + "px", 
+                top: this.y + "px"
+            });
+            
+            // Update sprite position
+            if (this.sprite) {
+                this.sprite.x = this.x;
+                this.sprite.y = this.y;
+            }
+            
+            BonziHandler.needsUpdate = true;
             this.updateDialog();
+        }
     },
-},
                 {
                     key: "mouseup",
                     value: function (a) {

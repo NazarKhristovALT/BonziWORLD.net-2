@@ -74,11 +74,14 @@ const COMMON_COLORS = [
   'purple',
   'red',
   'pink',
-    'white',
-      'yellow',
-        'orange',
-          'cyan',
+  'white',
+  'yellow',
+  'orange',
+  'cyan',
 ];
+
+// Add this missing constant
+const ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 
 function isKnownColor(color) {
   return COMMON_COLORS.includes(color) || ADMIN_ONLY_COLORS.includes(color);
