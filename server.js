@@ -29,7 +29,7 @@ const BLOCKED_PATTERNS = [
     'socket', 'eval', 'Function', 'constructor', 'prototype', 'document',
     'window', 'localStorage', 'sessionStorage', 'indexedDB', 'XMLHttpRequest',
     'WebSocket', 'fetch', 'prompt', 'alert', 'confirm', 'script', 'iframe',
-    'onload', 'onerror', 'javascript:', 'data:', 'vbscript:'
+    'onload', 'onerror', 'javascript:', 'data:', 'vbscript:', '[['
 ];
 
 const RATE_LIMIT = {
@@ -381,6 +381,31 @@ io.on('connection', (socket) => {
                 firstMessage: now
             });
         }
+            const room = socket.room;
+    const guid = socket.guid;
+    
+    // Validate input
+    if (!room || !guid || !rooms[room] || !rooms[room][guid]) return;
+    if (typeof data.text !== 'string') return;
+    
+    // Check for injection attempts
+    if (containsInjectionAttempt(data.text)) {
+        // ...existing injection handling code...
+        return;
+    }
+    
+    // Clean the text
+    const cleanText = sanitizeInput(data.text);
+    
+    // Create a special version for TTS that removes [[ sequences
+    const ttsText = cleanText.replace(/\[\[/g, '');
+    
+    // Broadcast clean message with both display and TTS versions
+    io.to(room).emit('talk', {
+        guid: guid,
+        text: cleanText,
+        tts: ttsText  // Add this new field for TTS
+    });
     }
     
     const room = socket.room;
@@ -398,7 +423,7 @@ io.on('connection', (socket) => {
         // Notify everyone about the attempt
         io.to(room).emit('talk', {
             guid: guid,
-            text: "HEY EVERYONE LOOK AT ME I'M TRYING TO SCREW WITH THE SERVERS LMAO"
+            text: " "
         });
         
         // Optional: Add strike system
@@ -665,6 +690,65 @@ io.on('connection', (socket) => {
           io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
         }
         break;
+        case 'shush':
+    // Check if user has godmode
+    if (!rooms[room][guid].admin) {
+        socket.emit('alert', { text: 'Did you try password?' });
+        break;
+    }
+    // Find the target user by name
+    const shushTargetGuid = Object.keys(rooms[room]).find(key => 
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    if (shushTargetGuid && shushTargetGuid !== guid) {
+        io.to(room).emit('shush', {
+            guid: shushTargetGuid,
+            shusher: rooms[room][guid].name
+        });
+    }
+    break;
+    case 'bless':
+    // Check if user has admin privileges
+    if (!rooms[room][guid].admin) {
+        socket.emit('alert', { text: 'Did you try password?' });
+        break;
+    }
+    // Find target user by name
+    const blessTargetGuid = Object.keys(rooms[room]).find(key => 
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    if (blessTargetGuid) {
+        // Update target's color to angel
+        rooms[room][blessTargetGuid].color = 'angel';
+        // Broadcast update to all clients
+        io.to(room).emit('update', {
+            guid: blessTargetGuid,
+            userPublic: rooms[room][blessTargetGuid]
+        });
+    }
+    break;
+
+case 'ultrabless':
+    // Check if user has admin privileges  
+    if (!rooms[room][guid].admin) {
+        socket.emit('alert', { text: 'Did you try password?' });
+        break;
+    }
+    // Find target user by name
+    const ultraBlessTargetGuid = Object.keys(rooms[room]).find(key =>
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    if (ultraBlessTargetGuid) {
+        // Update target's color to angelsupreme
+        rooms[room][ultraBlessTargetGuid].color = 'angelsupreme';
+        // Broadcast update to all clients
+        io.to(room).emit('update', {
+            guid: ultraBlessTargetGuid, 
+            userPublic: rooms[room][ultraBlessTargetGuid]
+        });
+
+    }
+    break;
       case 'kick':
         console.log('Kick command received:', {
           sender: guid,

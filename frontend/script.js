@@ -3,7 +3,7 @@ var passcode = "";
 var err = false;
 var admin = false;
 // Color configuration (easier to extend)
-var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll"]; 
+var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll"]; 
 var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 var HATS_LOADED = false; 
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
@@ -414,6 +414,13 @@ socket.on("update", function (a) {
                 targetBonzi.explode();
             }
         });
+        socket.on('shush', function (data) {
+    var b = bonzis[data.guid];
+    if (!b) return;
+    b.cancel();
+    // Make them say just a dot
+    b.runSingleEvent([{ type: "text", text: "." }]);
+});
         socket.on("refresh", function () {
             window.location.reload();
         });
@@ -598,7 +605,21 @@ var _createClass = (function () {
 
                                             }
                                         }
-                                    }
+                                    },
+                                    bless: {
+                                        name: "Bless",
+                                        callback: function () {
+ socket.emit('command', { list: ["bless", d.userPublic.name, reason] });
+                                        }
+                                    },
+                                    shush: {
+    name: "Shush",
+    callback: function () {
+        socket.emit('command', { 
+            list: ["shush", d.userPublic.name]
+        });
+    }
+}
                                 }
                             };
                         }
