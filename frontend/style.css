@@ -709,7 +709,7 @@ body.vaporwave #chat_send {
     display: flex;
     flex-direction: column;
     max-width: 100%;
-    height: 100%;
+    height: 100%; /* Ensure window takes full height */
 }
 
 .window_header {
@@ -725,13 +725,17 @@ body.vaporwave #chat_send {
     text-shadow: #0006 2px 2px 1px;
 }
 
+
+
 .window_body {
     flex: 1;
     padding: 4px 6px 6px 6px;
     border-image: url("./img/desktop/window_border.png") 0 6 6 6 / 0px 6px 6px 6px;
     image-rendering: pixelated;
     background: #ffe;
-    overflow: hidden;
+    overflow: hidden; /* This might be causing the issue */
+    display: flex; /* Add this to ensure proper flex behavior */
+    flex-direction: column; /* Add this */
 }
 
 .window_close {
@@ -751,16 +755,20 @@ body.vaporwave #chat_send {
     background-position-y: -42px;
 }
 
+
+
 #chat_log_content {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 3px;
-    overflow: hidden scroll;
+    overflow-y: auto; /* Change from 'hidden scroll' to 'auto' for better browser support */
+    overflow-x: hidden;
     font-size: 12pt;
     overflow-wrap: break-word;
     word-wrap: break-word;
     word-break: break-word;
+    min-height: 0; /* Important for flex children to scroll properly */
 }
 
 #chat_log_content hr:first-child {
