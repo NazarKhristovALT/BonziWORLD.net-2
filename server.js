@@ -26,16 +26,72 @@ const BLESSED_HATS = [
 
 // Security constants
 const BLOCKED_PATTERNS = [
-    'socket', 'eval', 'Function', 'constructor', 'prototype', 'document',
-    'window', 'localStorage', 'sessionStorage', 'indexedDB', 'XMLHttpRequest',
-    'WebSocket', 'fetch', 'prompt', 'alert', 'confirm', 'script', 'iframe',
-    'onload', 'onerror', 'javascript:', 'data:', 'vbscript:', '[['
+    // JavaScript execution
+    'javascript:', 'eval(', 'Function(', '.constructor', 'document.',
+    'window.', 'localStorage', 'sessionStorage', 'indexedDB', 
+    'XMLHttpRequest', 'WebSocket', 'fetch(', 'Worker(', 
+    'importScripts', 'Proxy(', 'addEventListener',
+
+    // HTML injection
+    '<script', '</script', '<iframe', '<object', '<embed',
+    'javascript:', 'vbscript:', 'data:', 'onload=', 'onerror=',
+    'onclick=', 'onmouseover=', 'onfocus=', 'onblur=',
+
+    // Protocol handlers
+    'file:', 'data:', 'blob:', 'about:', 'javascript:', 'vbscript:',
+    
+    // Malicious patterns
+    '[[', ']]', '__proto__', '__defineGetter__', '__defineSetter__',
+    'prototype', '.call(', '.apply(', '.bind('
 ];
 
-const RATE_LIMIT = {
-    messages: 5,    // messages
-    interval: 5000  // milliseconds
-};
+// Update containsInjectionAttempt to be more robust
+function containsInjectionAttempt(text) {
+    if (typeof text !== 'string') return true;
+    
+    // Convert to lowercase and normalize whitespace
+    const normalized = text.toLowerCase().replace(/\s+/g, '');
+    
+    // Check for blocked patterns
+    for (const pattern of BLOCKED_PATTERNS) {
+        if (normalized.includes(pattern.toLowerCase())) {
+            return true;
+        }
+    }
+    
+    // Check for HTML tags
+    if (/<[^>]*>/g.test(text)) {
+        return true; 
+    }
+
+    // Check for URL schemes
+    if (/^(?:javascript|data|vbscript|file):/i.test(text)) {
+        return true;
+    }
+
+    return false;
+}
+
+// Update sanitizeInput to be more thorough
+function sanitizeInput(text) {
+    if (typeof text !== 'string') return '';
+
+    return text
+        // Remove HTML
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        // Remove quotes
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        // Remove slashes
+        .replace(/\//g, '&#x2F;')
+        // Remove backticks
+        .replace(/`/g, '&#x60;')
+        // Remove null bytes
+        .replace(/\0/g, '')
+        // Limit length
+        .substring(0, 1000);
+}
 
 // IP tracking and limits
 const ipConnections = new Map(); // Tracks active socket IDs per IP
