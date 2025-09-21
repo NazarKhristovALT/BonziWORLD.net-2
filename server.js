@@ -23,10 +23,28 @@ const BLESSED_HATS = [
     "windows2", "windows3", "windows4", "windows5", "windows6", "windows7", "windows8", 
     "windows9", "windows10", "windows11", "windows12", "mario2", "luigi", "megatron"
 ];
+
+// Security constants
+const BLOCKED_PATTERNS = [
+    'socket', 'eval', 'Function', 'constructor', 'prototype', 'document',
+    'window', 'localStorage', 'sessionStorage', 'indexedDB', 'XMLHttpRequest',
+    'WebSocket', 'fetch', 'prompt', 'alert', 'confirm', 'script', 'iframe',
+    'onload', 'onerror', 'javascript:', 'data:', 'vbscript:'
+];
+
+const RATE_LIMIT = {
+    messages: 5,    // messages
+    interval: 5000  // milliseconds
+};
+
 // IP tracking and limits
 const ipConnections = new Map(); // Tracks active socket IDs per IP
 const ipAlts = new Map(); // Tracks total alt count per IP (persists after disconnect)
 const MAX_ALTS = 4;  // Maximum alts per IP
+
+// Rate limiting trackers
+const messageRateLimit = new Map();
+const commandRateLimit = new Map();
 
 // Cleanup function to remove old IP entries
 function cleanupIpAlts() {
@@ -99,6 +117,25 @@ function clamp(num, min, max) {
   return Math.max(min, Math.min(max, num));
 }
 
+// Security helper functions
+function containsInjectionAttempt(text) {
+    if (typeof text !== 'string') return true;
+    const normalized = text.toLowerCase();
+    return BLOCKED_PATTERNS.some(pattern => normalized.includes(pattern));
+}
+
+function sanitizeInput(text) {
+    if (typeof text !== 'string') return '';
+    return text
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;')
+        .substring(0, 1000); // Limit message length
+}
+
 // Default media whitelists
 const DEFAULT_IMAGE_WHITELIST = [
   'files.catbox.moe',
@@ -135,6 +172,11 @@ try {
         if (!Array.isArray(config.image_whitelist) || config.image_whitelist.length === 0) config.image_whitelist = DEFAULT_IMAGE_WHITELIST.slice();
         if (!Array.isArray(config.video_whitelist) || config.video_whitelist.length === 0) config.video_whitelist = DEFAULT_VIDEO_WHITELIST.slice();
     } else {
+        // Ensure config directory exists
+        const configDir = path.dirname(configPath);
+        if (!fs.existsSync(configDir)) {
+            fs.mkdirSync(configDir, { recursive: true });
+        }
         fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
     }
 } catch (err) {
@@ -177,14 +219,45 @@ function checkBan(ip) {
     return ban || null;
 }
 
+// Helper: validate media URLs against whitelist and extensions
+function isAllowedMediaUrl(rawUrl, kind) {
+  try {
+    const u = new URL(rawUrl);
+    const host = (u.hostname || '').toLowerCase();
+    const pathname = (u.pathname || '').toLowerCase();
+    const allowedDomains = (kind === 'image') ? (config.image_whitelist || []) : (config.video_whitelist || []);
+    const domainAllowed = allowedDomains.some(d => host === d || host.endsWith('.' + d));
+    if (!domainAllowed) return false;
+    const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+    const videoExts = ['.mp4', '.webm', '.ogg'];
+    const allowedExts = (kind === 'image') ? imageExts : videoExts;
+    return allowedExts.some(ext => pathname.endsWith(ext));
+  } catch (e) {
+    return false;
+  }
+}
+
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
   
-  // Get real IP from headers or socket
-  const clientIp = socket.handshake.headers['x-real-ip'] || 
-                   socket.handshake.headers['x-forwarded-for'] || 
-                   socket.handshake.address;
-                   
+  // Get real IP from headers or socket with better IP validation
+  let clientIp = socket.handshake.headers['x-real-ip'] || 
+                 socket.handshake.headers['x-forwarded-for'] || 
+                 socket.handshake.address;
+  
+  // Handle X-Forwarded-For format (could be comma-separated list)
+  if (clientIp && clientIp.includes(',')) {
+    clientIp = clientIp.split(',')[0].trim();
+  }
+  
+  // Validate IP format (basic validation)
+  const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^([a-f0-9:]+:+)+[a-f0-9]+$/i;
+  if (!ipRegex.test(clientIp)) {
+    console.log('Invalid IP address detected:', clientIp);
+    socket.disconnect();
+    return;
+  }
+  
   // Initialize IP tracking
   if (!ipConnections.has(clientIp)) {
     ipConnections.set(clientIp, new Set());
@@ -221,9 +294,21 @@ io.on('connection', (socket) => {
   });
 
   socket.on('login', function(data) {
-    // Minimal validation
-    const name = (data.name || '').trim().substring(0, 32) || 'Anonymous';
-    const room = (data.room || 'main').trim();
+    // Input validation and sanitization
+    if (!data || typeof data !== 'object') {
+      socket.disconnect();
+      return;
+    }
+    
+    // Check for injection attempts in name and room
+    if (containsInjectionAttempt(data.name) || containsInjectionAttempt(data.room)) {
+      console.log('Injection attempt detected in login:', socket.id);
+      socket.disconnect();
+      return;
+    }
+    
+    const name = sanitizeInput((data.name || '').trim().substring(0, 32)) || 'Anonymous';
+    const room = sanitizeInput((data.room || 'main').trim());
     const guid = socket.id;
 
     // Check for ban if trying to join public room
@@ -274,18 +359,109 @@ io.on('connection', (socket) => {
   });
 
   socket.on('talk', function(data) {
+    // Rate limiting
+    const now = Date.now();
+    if (!messageRateLimit.has(socket.guid)) {
+        messageRateLimit.set(socket.guid, {
+            messages: 1,
+            firstMessage: now
+        });
+    } else {
+        const limit = messageRateLimit.get(socket.guid);
+        if (now - limit.firstMessage < RATE_LIMIT.interval) {
+            limit.messages++;
+            if (limit.messages > RATE_LIMIT.messages) {
+                socket.emit('alert', { text: 'You are sending messages too fast!' });
+                return;
+            }
+        } else {
+            // Reset counter
+            messageRateLimit.set(socket.guid, {
+                messages: 1,
+                firstMessage: now
+            });
+        }
+    }
+    
     const room = socket.room;
     const guid = socket.guid;
-    if (room && guid && typeof data.text === 'string') {
-      io.to(room).emit('talk', {
-        guid: guid,
-        text: data.text
-      });
+    
+    // Validate input
+    if (!room || !guid || !rooms[room] || !rooms[room][guid]) return;
+    if (typeof data.text !== 'string') return;
+    
+    // Check for injection attempts
+    if (containsInjectionAttempt(data.text)) {
+        // Log attempt
+        console.log(`Injection attempt from ${guid}: ${data.text}`);
+        
+        // Notify everyone about the attempt
+        io.to(room).emit('talk', {
+            guid: guid,
+            text: "HEY EVERYONE LOOK AT ME I'M TRYING TO SCREW WITH THE SERVERS LMAO"
+        });
+        
+        // Optional: Add strike system
+        if (!rooms[room][guid].strikes) rooms[room][guid].strikes = 0;
+        rooms[room][guid].strikes++;
+        
+        // Auto-kick after 3 strikes
+        if (rooms[room][guid].strikes >= 3) {
+            io.to(guid).emit('kick', {
+                guid: guid,
+                reason: "Too many injection attempts"
+            });
+            delete rooms[room][guid];
+            io.to(room).emit('leave', { guid: guid });
+        }
+        
+        return;
     }
+    
+    // Clean the text
+    const cleanText = sanitizeInput(data.text);
+    
+    // Broadcast clean message
+    io.to(room).emit('talk', {
+        guid: guid,
+        text: cleanText
+    });
   });
 
   socket.on('command', function(data) {
+    // Rate limiting for commands
+    const now = Date.now();
+    if (!commandRateLimit.has(socket.guid)) {
+        commandRateLimit.set(socket.guid, {
+            commands: 1,
+            firstCommand: now
+        });
+    } else {
+        const limit = commandRateLimit.get(socket.guid);
+        if (now - limit.firstCommand < RATE_LIMIT.interval) {
+            limit.commands++;
+            if (limit.commands > RATE_LIMIT.messages) {
+                socket.emit('alert', { text: 'you are sending commands too fast!!1!' });
+                return;
+            }
+        } else {
+            // Reset counter
+            commandRateLimit.set(socket.guid, {
+                commands: 1,
+                firstCommand: now
+            });
+        }
+    }
+    
     if (!Array.isArray(data.list) || data.list.length === 0) return;
+    
+    // Check each command argument for injection attempts
+    if (data.list.some(arg => containsInjectionAttempt(arg))) {
+        console.log(`command injection attempt from ${socket.guid}: ${data.list.join(' ')}`);
+        socket.emit('alert', { text: 'oh dont do that' });
+        return;
+    }
+    
     const cmd = (data.list[0] || '').toLowerCase();
     const args = data.list.slice(1);
     const room = socket.room;
@@ -303,42 +479,42 @@ io.on('connection', (socket) => {
         break;
       case 'name':
         if (args.length > 0) {
-          const newName = args.join(' ').substring(0, 32);
+          const newName = sanitizeInput(args.join(' ').substring(0, 32));
           userPublic.name = newName;
           io.to(room).emit('update', { guid, userPublic });
         }
         break;
-        case 'h':
-    userPublic.hat = ["mario"]; // Test with mario hat
-    io.to(room).emit('update', { guid, userPublic });
-    break;
-case 'hat':
-    if (args.length > 0) {
-        let requestedHats = args.join(' ').toLowerCase().split(' ').slice(0, 3);
-        let allowedHats = [...ALLOWED_HATS];
-        
-        // Admins get access to blessed hats
-        if (userPublic.admin) {
-            allowedHats = [...allowedHats, ...BLESSED_HATS];
-        }
+      case 'h':
+        userPublic.hat = ["mario"]; // Test with mario hat
+        io.to(room).emit('update', { guid, userPublic });
+        break;
+      case 'hat':
+        if (args.length > 0) {
+            let requestedHats = args.join(' ').toLowerCase().split(' ').slice(0, 3);
+            let allowedHats = [...ALLOWED_HATS];
+            
+            // Admins get access to blessed hats
+            if (userPublic.admin) {
+                allowedHats = [...allowedHats, ...BLESSED_HATS];
+            }
 
-        // Filter valid hats
-        let validHats = requestedHats.filter(hat => allowedHats.includes(hat));
-        
-        userPublic.hat = validHats;
-        io.to(room).emit('update', { guid, userPublic });
-        
-        console.log("Hat command executed:", {
-            user: userPublic.name,
-            requested: requestedHats,
-            allowed: validHats
-        });
-    } else {
-        // Remove all hats if no arguments
-        userPublic.hat = [];
-        io.to(room).emit('update', { guid, userPublic });
-    }
-    break;
+            // Filter valid hats
+            let validHats = requestedHats.filter(hat => allowedHats.includes(hat));
+            
+            userPublic.hat = validHats;
+            io.to(room).emit('update', { guid, userPublic });
+            
+            console.log("Hat command executed:", {
+                user: userPublic.name,
+                requested: requestedHats,
+                allowed: validHats
+            });
+        } else {
+            // Remove all hats if no arguments
+            userPublic.hat = [];
+            io.to(room).emit('update', { guid, userPublic });
+        }
+        break;
       case 'color':
         if (args[0]) {
           const requested = args[0].toLowerCase();
@@ -418,7 +594,7 @@ case 'hat':
       }
       case 'tag':
         if (args.length > 0) {
-          const newTag = args.join(' ').substring(0, 20); // Limit to 20 characters
+          const newTag = sanitizeInput(args.join(' ').substring(0, 20)); // Limit to 20 characters
           userPublic.tag = newTag;
           io.to(room).emit('update', { guid, userPublic });
         } else {
@@ -429,7 +605,7 @@ case 'hat':
         break;
       case 'poll':
         if (args.length > 0) {
-          const question = args.join(' ').trim().substring(0, 140);
+          const question = sanitizeInput(args.join(' ').trim().substring(0, 140));
           if (question.length === 0) break;
           const pollId = `${Date.now()}_${guid}`;
           roomPolls[room] = {
@@ -598,7 +774,7 @@ case 'hat':
           break;
         }
         if (args.length > 0) {
-          const html = args.join(' ').trim();
+          const html = sanitizeInput(args.join(' ').trim());
           if (html.length > 0) {
             io.emit('announcement', {
               from: rooms[room][guid].name,
@@ -676,6 +852,10 @@ case 'hat':
       }
     }
 
+    // Clean up rate limiting
+    messageRateLimit.delete(socket.guid);
+    commandRateLimit.delete(socket.guid);
+
     const room = socket.room;
     const guid = socket.guid;
     if (room && rooms[room] && rooms[room][guid]) {
@@ -693,22 +873,4 @@ case 'hat':
 
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
-}); 
-
-// Helper: validate media URLs against whitelist and extensions
-function isAllowedMediaUrl(rawUrl, kind) {
-  try {
-    const u = new URL(rawUrl);
-    const host = (u.hostname || '').toLowerCase();
-    const pathname = (u.pathname || '').toLowerCase();
-    const allowedDomains = (kind === 'image') ? (config.image_whitelist || []) : (config.video_whitelist || []);
-    const domainAllowed = allowedDomains.some(d => host === d || host.endsWith('.' + d));
-    if (!domainAllowed) return false;
-    const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
-    const videoExts = ['.mp4', '.webm', '.ogg'];
-    const allowedExts = (kind === 'image') ? imageExts : videoExts;
-    return allowedExts.some(ext => pathname.endsWith(ext));
-  } catch (e) {
-    return false;
-  }
-}
+});
