@@ -1008,19 +1008,41 @@ var _createClass = (function () {
                         a && (b.push({ type: "anim", anim: "cool_fwd", ticks: 30 }), b.push({ type: "idle" })), this.runSingleEvent(b);
                     },
                 },
-                {
-                    key: "updateDialog",
-                    value: function () {
-                        var a = this.maxCoords();
-                        this.data.size.x + this.$dialog.width() > a.x
-                            ? this.y < this.$container.height() / 2 - this.data.size.x / 2
-                                ? this.$dialog.removeClass("bubble-top").removeClass("bubble-left").removeClass("bubble-right").addClass("bubble-bottom")
-                                : this.$dialog.removeClass("bubble-bottom").removeClass("bubble-left").removeClass("bubble-right").addClass("bubble-top")
-                            : this.x < this.$container.width() / 2 - this.data.size.x / 2
-                            ? this.$dialog.removeClass("bubble-left").removeClass("bubble-top").removeClass("bubble-bottom").addClass("bubble-right")
-                            : this.$dialog.removeClass("bubble-right").removeClass("bubble-top").removeClass("bubble-bottom").addClass("bubble-left");
-                    },
-                },
+{
+    key: "updateDialog",
+    value: function () {
+        var containerWidth = this.$container.width();
+        var containerHeight = this.$container.height();
+        var bubbleWidth = this.$dialog.width();
+        var bubbleHeight = this.$dialog.height();
+        var bonziWidth = this.data.size.x;
+        var bonziHeight = this.data.size.y;
+        
+        // Calculate available space on each side
+        var spaceRight = containerWidth - (this.x + bonziWidth);
+        var spaceLeft = this.x;
+        var spaceTop = this.y;
+        var spaceBottom = containerHeight - (this.y + bonziHeight);
+        
+        // Determine the best position for the bubble
+        if (spaceRight >= bubbleWidth) {
+            // Enough space on the right
+            this.$dialog.removeClass("bubble-left bubble-top bubble-bottom").addClass("bubble-right");
+        } else if (spaceLeft >= bubbleWidth) {
+            // Enough space on the left
+            this.$dialog.removeClass("bubble-right bubble-top bubble-bottom").addClass("bubble-left");
+        } else if (spaceBottom >= bubbleHeight) {
+            // Enough space below
+            this.$dialog.removeClass("bubble-left bubble-right bubble-top").addClass("bubble-bottom");
+        } else if (spaceTop >= bubbleHeight) {
+            // Enough space above
+            this.$dialog.removeClass("bubble-left bubble-right bubble-bottom").addClass("bubble-top");
+        } else {
+            // Default to right if no space anywhere (shouldn't normally happen)
+            this.$dialog.removeClass("bubble-left bubble-top bubble-bottom").addClass("bubble-right");
+        }
+    }
+},
                 {
                     key: "maxCoords",
                     value: function () {
