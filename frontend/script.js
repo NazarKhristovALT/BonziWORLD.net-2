@@ -9,6 +9,7 @@ var HATS_LOADED = false;
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
 var quote = null;
 let lastUser = "";
+var currentUserGuid = "";
 
 function time() {
     let date = new Date();
@@ -301,9 +302,16 @@ document.getElementById("chat_log_close").onclick = function() {
         socket.on("room", function (a) {
             $("#room_owner")[a.isOwner ? "show" : "hide"](), $("#room_public")[a.isPublic ? "show" : "hide"](), $("#room_private")[a.isPublic ? "hide" : "show"](), $(".room_id").text(a.room);
         }),
-        socket.on("updateAll", function (a) {
-            $("#page_login").hide(), (usersPublic = a.usersPublic), usersUpdate(), BonziHandler.bonzisCheck();
-        }),
+socket.on("updateAll", function (a) {
+    $("#page_login").hide(), 
+    (usersPublic = a.usersPublic), 
+    usersUpdate(), 
+    BonziHandler.bonzisCheck();
+    for (var guid in usersPublic) {
+        currentUserGuid = guid;
+        break;
+    }
+});
 socket.on("update", function (a) {
     (window.usersPublic[a.guid] = a.userPublic), 
     usersUpdate(), 
@@ -327,6 +335,22 @@ socket.on("update", function (a) {
         false,
         data.msgid || null
     );
+});
+socket.on("shop", function(data) {
+    var b = bonzis[data.guid];
+    if (b && data.guid === currentUserGuid) { // Only show to the user who requested it
+        b.debugShop();
+    }
+});
+
+socket.on("event", function(data) {
+    var b = bonzis[data.guid];
+    if (b && data.guid === currentUserGuid) { // Only show to the user who requested it
+        b.debugEvent();
+    }
+});
+socket.on("loginSuccess", function(data) {
+    currentUserGuid = data.guid; // Set the current user's GUID
 });
         socket.on("joke", function (a) {
             var b = bonzis[a.guid];
@@ -697,6 +721,158 @@ var _createClass = (function () {
         // Show the hat container if any hats were already loaded
         if (hatsLoaded > 0) {
             this.$hat.show();
+        }
+    }
+},
+{
+    key: "debugShop",
+    value: function() {
+        if (!this.debugShopWindow) {
+            var self = this;
+            this.$element.append(
+                '<div id="debug_shop_' + this.id + '" class="debug-window" style="position:absolute;z-index:1000;display:none;user-select:none;-webkit-user-select:none;">' +
+                '<div style="position:absolute;top:7px;right:7px;width:21px;height:21px;cursor:pointer;z-index:1001;" class="close-button">' +
+                '<img src="./img/desktop/close.shop.png" style="width:21px;height:21px;">' +
+                '</div>' +
+                '<img src="./img/desktop/window.shop.png" style="display:block;pointer-events:none;">' +
+                '<div class="debug-content" style="position:absolute;top:50px;left:20px;color:yellow;font-family:Arial;pointer-events:none;">' +
+                '<marquee><span style="font-size: 42px; color: orange; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">WELCOME TO THE SHOP!!! AWESOME SKINS AND HATS!!!</span></marquee>' +
+                '<br><br><br>' +
+                '<span style="font-size: 24px; color: orange; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">ON SALE:</span>' +
+                '<br>' +
+                '<span style="font-size: 24px; color: orange; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">All the goodness are not available... yet.</span>' +
+                '</div>' +
+                '</div>'
+            );
+
+            this.debugShopWindow = $("#debug_shop_" + this.id);
+            this.debugShopWindow.find('.close-button').click(function() {
+                self.debugShopWindow.hide();
+            });
+
+            // Dragging functionality
+            var isDragging = false;
+            var startX, startY, initialX, initialY;
+            
+            this.debugShopWindow.on('mousedown', function(e) {
+                var y = e.offsetY;
+                if (y <= 33) {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    initialX = parseInt(self.debugShopWindow.css('left'), 10) || 0;
+                    initialY = parseInt(self.debugShopWindow.css('top'), 10) || 0;
+                    e.preventDefault();
+                }
+            });
+
+            $(document).on('mousemove', function(e) {
+                if (isDragging) {
+                    var dx = e.clientX - startX;
+                    var dy = e.clientY - startY;
+                    self.debugShopWindow.css({
+                        left: (initialX + dx) + 'px',
+                        top: (initialY + dy) + 'px'
+                    });
+                }
+            });
+
+            $(document).on('mouseup', function() {
+                isDragging = false;
+            });
+
+            // Position window
+            var maxCoords = this.maxCoords();
+            this.debugShopWindow.css({
+                left: (maxCoords.x / 2 - 200) + 'px',
+                top: (maxCoords.y / 2 - 150) + 'px'
+            });
+        }
+
+        // Toggle visibility
+        if (this.debugShopWindow.is(":visible")) {
+            this.debugShopWindow.hide();
+        } else {
+            this.debugShopWindow.show();
+        }
+    }
+},
+{
+    key: "debugEvent",
+    value: function() {
+        if (!this.debugEventWindow) {
+            var self = this;
+            this.$element.append(
+                '<div id="debug_event_' + this.id + '" class="debug-window" style="position:absolute;z-index:1000;display:none;user-select:none;-webkit-user-select:none;">' +
+                '<div style="position:absolute;top:7px;right:7px;width:21px;height:21px;cursor:pointer;z-index:1001;" class="close-button">' +
+                '<img src="./img/desktop/close.event.png" style="width:21px;height:21px;">' +
+                '</div>' +
+                '<div style="position:absolute;top:7px;left:738px;width:117px;height:21px;cursor:pointer;z-index:1001;" class="event-button">' +
+                '<img src="./img/desktop/button.continuetoshop.png" style="width:117px;height:21px;">' +
+                '</div>' +
+                '<img src="./img/desktop/window.event.png" style="display:block;pointer-events:none;">' +
+                '<div class="debug-content" style="position:absolute;top:50px;left:20px;color:green;font-family:Arial;pointer-events:none;">' +
+                '<marquee><span style="font-size: 42px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">BEGINNER EVENT!!! GET THESE 4 ITEMS THIS EVENT!!!</span></marquee>' +
+                '<br><br><br>' +
+                '<span style="font-size: 24px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">BEGINNER EVENT:</span><br>' +
+                '<span style="font-size: 24px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">NOHING HERE!</span><br>' +
+                '</div>'
+            );
+
+            this.debugEventWindow = $("#debug_event_" + this.id);
+            this.debugEventWindow.find('.close-button').click(function() {
+                self.debugEventWindow.hide();
+            });
+
+            this.debugEventWindow.find('.event-button').click(function() {
+                self.debugEventWindow.hide();
+                self.debugShop();
+            });
+
+            // Dragging functionality (same as shop)
+            var isDragging = false;
+            var startX, startY, initialX, initialY;
+            
+            this.debugEventWindow.on('mousedown', function(e) {
+                var y = e.offsetY;
+                if (y <= 33) {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    initialX = parseInt(self.debugEventWindow.css('left'), 10) || 0;
+                    initialY = parseInt(self.debugEventWindow.css('top'), 10) || 0;
+                    e.preventDefault();
+                }
+            });
+
+            $(document).on('mousemove', function(e) {
+                if (isDragging) {
+                    var dx = e.clientX - startX;
+                    var dy = e.clientY - startY;
+                    self.debugEventWindow.css({
+                        left: (initialX + dx) + 'px',
+                        top: (initialY + dy) + 'px'
+                    });
+                }
+            });
+
+            $(document).on('mouseup', function() {
+                isDragging = false;
+            });
+
+            // Position window
+            var maxCoords = this.maxCoords();
+            this.debugEventWindow.css({
+                left: (maxCoords.x / 2 - 200) + 'px',
+                top: (maxCoords.y / 2 - 150) + 'px'
+            });
+        }
+
+        // Toggle visibility
+        if (this.debugEventWindow.is(":visible")) {
+            this.debugEventWindow.hide();
+        } else {
+            this.debugEventWindow.show();
         }
     }
 },

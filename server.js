@@ -27,7 +27,11 @@ const BLESSED_HATS = [
 const ADMIN_HATS = [
     "scorp"
 ];
-
+const BLESSED_USERS = [
+    // Add blessed usernames or IPs here
+    "exampleUser",
+    "anotherUser"
+];
 // Rate limiting configuration
 const RATE_LIMIT = {
     interval: 60000, // 1 minute in milliseconds
@@ -203,7 +207,7 @@ const DEFAULT_VIDEO_WHITELIST = [
 
 // Load or create config file
 let config = {
-    godmode_password: "nasrshbools",
+    godmode_password: "nasrshboolsfornow",
     image_whitelist: DEFAULT_IMAGE_WHITELIST.slice(),
     video_whitelist: DEFAULT_VIDEO_WHITELIST.slice()
 };
@@ -395,16 +399,24 @@ io.on('connection', (socket) => {
       isPublic: room === 'main',
       room: room
     });
+    
+    // Send login success with current user's GUID
+    socket.emit('loginSuccess', {
+        guid: guid,
+        userPublic: userPublic
+    });
+    
     // Send all users in the room
     socket.emit('updateAll', {
       usersPublic: rooms[room]
     });
+    
     // Notify others in the room
     socket.to(room).emit('update', {
       guid: guid,
       userPublic: userPublic
     });
-  });
+});
 
   socket.on('talk', function(data) {
     // Rate limiting
@@ -600,6 +612,15 @@ io.on('connection', (socket) => {
           io.to(room).emit('update', { guid, userPublic });
         }
         break;
+        case 'shop':
+    // Only send to the user who requested it
+    socket.emit('shop', { guid: guid });
+    break;
+
+case 'event':
+    // Only send to the user who requested it
+    socket.emit('event', { guid: guid });
+    break;
       case 'youtube':
         if (args[0]) {
           io.to(room).emit('youtube', { guid, vid: args[0] });
