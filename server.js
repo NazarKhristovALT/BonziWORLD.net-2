@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 80;
 const frontendDir = path.join(__dirname, 'frontend');
 const ALLOWED_HATS = [
     "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police", 
-    "demonmask", "shirt", "tinymario", "cap", "king", "palestine", "hiimstickman", 
+    "demonmask", "shirt", "tinymario", "cap", "palestine", "hiimstickman", 
     "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "bfdi", "bieber", 
     "bowtie", "bucket", "chain", "chef", "clippy", "cowboy", "elon", "evil", 
     "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", 
@@ -25,7 +25,7 @@ const BLESSED_HATS = [
 ];
 
 const MODERATOR_HATS = [
-    "police", "soldier", "guard"
+    "police", "soldier", "guard", "scorp", "king"
 ];
 
 const ADMIN_HATS = [
@@ -611,7 +611,7 @@ io.on('connection', (socket) => {
             
             // Moderators get access to moderator hats
             if (userPublic.moderator || userPublic.admin) {
-                allowedHats = [...allowedHats, ...MODERATOR_HATS];
+                allowedHats = [...allowedHats, ...MODERATOR_HATS, ...BLESSED_HATS];
             }
             
             // Admins get access to blessed hats
