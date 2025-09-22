@@ -417,6 +417,10 @@ socket.on("loginSuccess", function(data) {
             window.isAdmin = data.admin;
             window.admin = data.admin;
         }),
+        socket.on("moderator", function (data) {
+    window.isModerator = data.moderator;
+    window.moderator = data.moderator;
+});
         socket.on("alert", function (data) {
             alert(data.text);
         }),
@@ -564,94 +568,109 @@ var _createClass = (function () {
             (this.x = e.x * this.rng()),
                 (this.y = e.y * this.rng()),
                 this.move(),
-                $.contextMenu({
-                    selector: this.selCanvas,
-                    build: function (a, b) {
-                        var items = {
-                            cancel: {
-                                name: "Cancel",
-                                callback: function () {
-                                    d.cancel();
-                                },
-                            },
-                            mute: {
-                                name: function () {
-                                    return d.mute ? "Unmute" : "Mute";
-                                },
-                                callback: function () {
-                                    d.cancel(), (d.mute = !d.mute);
-                                },
-                            },
-                            asshole: {
-                                name: "Call an Asshole",
-                                callback: function () {
-                                    socket.emit("command", { list: ["asshole", d.userPublic.name] });
-                                },
-                            },
-                            owo: {
-                                name: "Notice Bulge",
-                                callback: function () {
-                                    socket.emit("command", { list: ["owo", d.userPublic.name] });
-                                },
+$.contextMenu({
+    selector: this.selCanvas,
+    build: function (a, b) {
+        var items = {
+            cancel: {
+                name: "Cancel",
+                callback: function () {
+                    d.cancel();
+                },
+            },
+            mute: {
+                name: function () {
+                    return d.mute ? "Unmute" : "Mute";
+                },
+                callback: function () {
+                    d.cancel(), (d.mute = !d.mute);
+                },
+            },
+            asshole: {
+                name: "Call an Asshole",
+                callback: function () {
+                    socket.emit("command", { list: ["asshole", d.userPublic.name] });
+                },
+            },
+            owo: {
+                name: "Notice Bulge",
+                callback: function () {
+                    socket.emit("command", { list: ["owo", d.userPublic.name] });
+                },
+            }
+        };
+
+        // Moderator panel
+        if (window.moderator || window.admin) {
+            items.sep1 = "---------";
+            items.moderator = {
+                name: "Mod Panel",
+                items: {
+                    kick: {
+                        name: "Kick User",
+                        callback: function () {
+                            var reason = prompt("Enter kick reason:", "No reason provided");
+                            if (reason !== null) {
+                                socket.emit('command', { list: ["kick", d.userPublic.name, reason] });
                             }
-                        };
-
-                        if (window.admin) {
-                            items.sep1 = "---------";
-                            items.admin = {
-                                name: "Mod",
-                                items: {
-                                    kick: {
-                                        name: "Kick",
-                                        callback: function () {
-                                            var reason = prompt("Enter kick reason:", "No reason provided");
-                                            if (reason !== null) {
-                                                socket.emit('command', { list: ["kick", d.userPublic.name, reason] });
-                                            }
-                                        }
-                                    },
-                                    tempban: {
-                                        name: "Temp Ban",
-                                        callback: function () {
-                                            var reason = prompt("Enter ban reason:", "No reason provided");
-                                            if (reason !== null) {
-                                                socket.emit('command', { list: ["tempban", d.userPublic.name, reason] });
-
-                                            }
-                                        }
-                                    },
-                                    ban: {
-                                        name: "Ban",
-                                        callback: function () {
-                                            var reason = prompt("Enter ban reason:", "No reason provided");
-                                            if (reason !== null) {
-                                                socket.emit('command', { list: ["ban", d.userPublic.name, reason] });
-
-                                            }
-                                        }
-                                    },
-                                    bless: {
-                                        name: "Bless",
-                                        callback: function () {
- socket.emit('command', { list: ["bless", d.userPublic.name, reason] });
-                                        }
-                                    },
-                                    shush: {
-    name: "Shush",
-    callback: function () {
-        socket.emit('command', { 
-            list: ["shush", d.userPublic.name]
-        });
-    }
-}
-                                }
-                            };
                         }
-
-                        return { items: items };
                     },
-                    animation: { duration: 175, show: "fadeIn", hide: "fadeOut" },
-                }),
+                    tempban: {
+                        name: "Temp Ban (5min)",
+                        callback: function () {
+                            var reason = prompt("Enter ban reason:", "No reason provided");
+                            if (reason !== null) {
+                                socket.emit('command', { list: ["tempban", d.userPublic.name, reason] });
+                            }
+                        }
+                    },
+                    bless: {
+                        name: "Bless User",
+                        callback: function () {
+                            socket.emit('command', { list: ["bless", d.userPublic.name] });
+                        }
+                    },
+                    shush: {
+                        name: "Shush User",
+                        callback: function () {
+                            socket.emit('command', { list: ["shush", d.userPublic.name] });
+                        }
+                    }
+                }
+            };
+        }
+
+        // Admin-only options
+        if (window.admin) {
+            items.moderator.items.ban = {
+                name: "Permanent Ban",
+                callback: function () {
+                    var reason = prompt("Enter ban reason:", "No reason provided");
+                    if (reason !== null) {
+                        socket.emit('command', { list: ["ban", d.userPublic.name, reason] });
+                    }
+                }
+            };
+            items.moderator.items.ultrabless = {
+                name: "Ultra Bless",
+                callback: function () {
+                    socket.emit('command', { list: ["ultrabless", d.userPublic.name] });
+                }
+            };
+            items.moderator.items.nuke = {
+                name: "Nuke User",
+                callback: function () {
+                    if (confirm("Are you sure you want to nuke this user?")) {
+                        socket.emit('command', { list: ["nuke", d.userPublic.name] });
+                    }
+                }
+            };
+        }
+
+        return { items: items };
+    },
+    animation: { duration: 175, show: "fadeIn", hide: "fadeOut" },
+});
                 (this.needsUpdate = !1),
                 this.runSingleEvent([{ type: "anim", anim: "surf_intro", ticks: 30 }]);
         }
@@ -1148,8 +1167,15 @@ var _createClass = (function () {
                         if (this.userPublic.admin) {
                             nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
                                 "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-                                "ADMIN " +
+                                "OWNER " +
                                 "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "</span>";
+                        }
+                        if (this.userPublic.moderator) {
+                            nameHtml += " <span style=\"background:#4177c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+                                "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "MOD " +
+                                "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
                                 "</span>";
                         }
                         this.$nametag.html(nameHtml);

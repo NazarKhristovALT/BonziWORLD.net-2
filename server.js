@@ -24,6 +24,10 @@ const BLESSED_HATS = [
     "windows9", "windows10", "windows11", "windows12", "mario2", "luigi", "megatron"
 ];
 
+const MODERATOR_HATS = [
+    "police", "soldier", "guard"
+];
+
 const ADMIN_HATS = [
     "scorp"
 ];
@@ -32,6 +36,13 @@ const BLESSED_USERS = [
     "exampleUser",
     "anotherUser"
 ];
+
+const MODERATOR_USERS = [
+    // Add moderator usernames here
+    "trustedUser1",
+    "trustedUser2"
+];
+
 // Rate limiting configuration
 const RATE_LIMIT = {
     interval: 60000, // 1 minute in milliseconds
@@ -205,22 +216,26 @@ const DEFAULT_VIDEO_WHITELIST = [
   'i.imgur.com'
 ];
 
-// Load or create config file
+const configPath = path.join(__dirname, 'config', 'config.json');
+const bansPath = path.join(__dirname, 'bans.json');
+
+// Default config
 let config = {
-    godmode_password: "nasrshboolsfornow",
+    godmode_password: 'bonzi',
+    moderator_password: 'modpass',
     image_whitelist: DEFAULT_IMAGE_WHITELIST.slice(),
     video_whitelist: DEFAULT_VIDEO_WHITELIST.slice()
 };
 
-const configPath = path.join(__dirname, 'config', 'config.json');
-const bansPath = path.join(__dirname, 'bans.json');
-
 try {
     if (fs.existsSync(configPath)) {
-        config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        const loadedConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         // Ensure defaults exist if missing in existing config file
-        if (!config || typeof config !== 'object') config = {};
+        if (loadedConfig && typeof loadedConfig === 'object') {
+            config = { ...config, ...loadedConfig };
+        }
         if (typeof config.godmode_password !== 'string') config.godmode_password = 'bonzi';
+        if (typeof config.moderator_password !== 'string') config.moderator_password = 'modpass';
         if (!Array.isArray(config.image_whitelist) || config.image_whitelist.length === 0) config.image_whitelist = DEFAULT_IMAGE_WHITELIST.slice();
         if (!Array.isArray(config.video_whitelist) || config.video_whitelist.length === 0) config.video_whitelist = DEFAULT_VIDEO_WHITELIST.slice();
     } else {
@@ -287,6 +302,17 @@ function isAllowedMediaUrl(rawUrl, kind) {
   } catch (e) {
     return false;
   }
+}
+
+// Helper function to check permissions
+function hasPermission(userPublic, requiredLevel) {
+    if (requiredLevel === 'admin') {
+        return userPublic.admin;
+    }
+    if (requiredLevel === 'moderator') {
+        return userPublic.admin || userPublic.moderator;
+    }
+    return true; // public commands
 }
 
 io.on('connection', (socket) => {
@@ -383,8 +409,15 @@ io.on('connection', (socket) => {
       pitch: Math.floor(Math.random() * (125 - 15 + 1)) + 15,
       voice: 'en-us',
       admin: false,
+      moderator: false, // Add moderator field
       hat: [] 
     };
+
+    // Check for moderator status
+    if (MODERATOR_USERS.includes(name.toLowerCase())) {
+        userPublic.moderator = true;
+        userPublic.color = 'blue'; // Optional: give moderators a special color
+    }
 
     // Join room
     socket.join(room);
@@ -534,6 +567,25 @@ io.on('connection', (socket) => {
     const userPublic = rooms[room][guid];
 
     switch (cmd) {
+      case 'modmode':
+        // Moderator login command
+        if (!args[0]) {
+          socket.emit('alert', { text: 'Enter moderator password' });
+          break;
+        }
+        if (args[0] !== config.moderator_password) {
+          socket.emit('alert', { text: 'Invalid moderator password' });
+          break;
+        }
+        // Enable moderator privileges
+        if (rooms[room][guid]) {
+          rooms[room][guid].moderator = true;
+          rooms[room][guid].color = 'blue'; // Optional: set moderator color
+          io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+          socket.emit('moderator', { moderator: true });
+        }
+        break;
+
       case 'asshole':
         // args[0] = target name
         io.to(room).emit('asshole', { guid, target: args[0] || '' });
@@ -556,6 +608,11 @@ io.on('connection', (socket) => {
         if (args.length > 0) {
             let requestedHats = args.join(' ').toLowerCase().split(' ').slice(0, 3);
             let allowedHats = [...ALLOWED_HATS];
+            
+            // Moderators get access to moderator hats
+            if (userPublic.moderator || userPublic.admin) {
+                allowedHats = [...allowedHats, ...MODERATOR_HATS];
+            }
             
             // Admins get access to blessed hats
             if (userPublic.admin) {
@@ -739,9 +796,9 @@ case 'event':
         }
         break;
         case 'shush':
-    // Check if user has godmode
-    if (!rooms[room][guid].admin) {
-        socket.emit('alert', { text: 'Did you try password?' });
+    // Check if user has moderator or admin permissions
+    if (!hasPermission(userPublic, 'moderator')) {
+        socket.emit('alert', { text: 'Moderator access required' });
         break;
     }
     // Find the target user by name
@@ -756,9 +813,9 @@ case 'event':
     }
     break;
     case 'bless':
-    // Check if user has admin privileges
-    if (!rooms[room][guid].admin) {
-        socket.emit('alert', { text: 'Did you try password?' });
+    // Check if user has moderator or admin privileges
+    if (!hasPermission(userPublic, 'moderator')) {
+        socket.emit('alert', { text: 'Moderator access required' });
         break;
     }
     // Find target user by name
@@ -777,9 +834,9 @@ case 'event':
     break;
 
 case 'ultrabless':
-    // Check if user has admin privileges  
-    if (!rooms[room][guid].admin) {
-        socket.emit('alert', { text: 'Did you try password?' });
+    // Check if user has admin privileges (moderators cannot ultrabless)
+    if (!userPublic.admin) {
+        socket.emit('alert', { text: 'Admin access required' });
         break;
     }
     // Find target user by name
@@ -794,19 +851,20 @@ case 'ultrabless':
             guid: ultraBlessTargetGuid, 
             userPublic: rooms[room][ultraBlessTargetGuid]
         });
-
     }
     break;
+
       case 'kick':
         console.log('Kick command received:', {
           sender: guid,
           hasAdmin: rooms[room][guid].admin,
+          hasModerator: rooms[room][guid].moderator,
           target: args[0],
           reason: args.slice(1).join(' ')
         });
-        // Check if user has godmode
-        if (!rooms[room][guid].admin) {
-          socket.emit('alert', { text: 'Did you try password?' });
+        // Check if user has moderator or admin permissions
+        if (!hasPermission(userPublic, 'moderator')) {
+          socket.emit('alert', { text: 'Moderator access required' });
           break;
         }
         // Find the target user by name
@@ -828,10 +886,84 @@ case 'ultrabless':
           console.log('Kick executed successfully');
         }
         break;
+
+      case 'tempban':
+        // Moderator-only temporary ban (5 minutes)
+        if (!hasPermission(userPublic, 'moderator')) {
+          socket.emit('alert', { text: 'Moderator access required' });
+          break;
+        }
+        // Find the target user by name
+        const tempbanTargetGuid = Object.keys(rooms[room]).find(key => 
+          rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+        );
+        console.log('Found tempban target:', tempbanTargetGuid);
+        if (tempbanTargetGuid && tempbanTargetGuid !== guid) {
+          const reason = args.slice(1).join(' ') || 'No reason provided';
+          const banEnd = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minute ban
+          
+          // Get target's IP from connected sockets
+          let targetIp = null;
+          Object.keys(io.sockets.connected).forEach(socketId => {
+            if (socketId === tempbanTargetGuid) {
+              const targetSocket = io.sockets.connected[socketId];
+              targetIp = targetSocket.handshake.headers['x-real-ip'] || 
+                        targetSocket.handshake.headers['x-forwarded-for'] || 
+                        targetSocket.handshake.address;
+            }
+          });
+
+          if (targetIp) {
+            // Add to persistent bans with IP
+            bans.push({
+              ip: targetIp,
+              name: rooms[room][tempbanTargetGuid].name,
+              reason: `[TEMP] ${reason}`,
+              end: banEnd,
+              bannedBy: rooms[room][guid].name,
+              bannedAt: new Date().toISOString(),
+              isTemp: true
+            });
+            saveBans();
+
+            // Notify all sockets from this IP about the ban
+            Object.keys(io.sockets.connected).forEach(socketId => {
+              const connectedSocket = io.sockets.connected[socketId];
+              const socketIp = connectedSocket.handshake.headers['x-real-ip'] || 
+                              connectedSocket.handshake.headers['x-forwarded-for'] || 
+                              connectedSocket.handshake.address;
+              
+              if (socketIp === targetIp) {
+                // Only remove them if they're in the main room
+                const socketRoom = connectedSocket.room;
+                const socketGuid = connectedSocket.guid;
+                if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
+                  delete rooms[socketRoom][socketGuid];
+                  // Clean up empty rooms
+                  if (Object.keys(rooms[socketRoom]).length === 0) {
+                    delete rooms[socketRoom];
+                  }
+                  io.to(socketRoom).emit('leave', { guid: socketGuid });
+                }
+                
+                // Notify them about the ban
+                connectedSocket.emit('ban', {
+                  guid: tempbanTargetGuid,
+                  reason: `Temporary ban: ${reason}`,
+                  end: banEnd
+                });
+              }
+            });
+
+            console.log('Tempban executed successfully');
+          }
+        }
+        break;
+
       case 'ban':
-        // Check if user has godmode
-        if (!rooms[room][guid].admin) {
-          socket.emit('alert', { text: 'Did you try password?' });
+        // Check if user has admin privileges (moderators cannot permanent ban)
+        if (!userPublic.admin) {
+          socket.emit('alert', { text: 'Admin access required' });
           break;
         }
         // Find the target user by name
@@ -899,10 +1031,11 @@ case 'ultrabless':
           }
         }
         break;
+
       case 'announcement':
         // Admin-only broadcast to all clients; accepts HTML
-        if (!rooms[room][guid].admin) {
-          socket.emit('alert', { text: 'Did you try password?' });
+        if (!userPublic.admin) {
+          socket.emit('alert', { text: 'Admin access required' });
           break;
         }
         if (args.length > 0) {
@@ -915,10 +1048,11 @@ case 'ultrabless':
           }
         }
         break;
+
       case 'nuke':
         // Admin-only nuke command
-        if (!rooms[room][guid].admin) {
-          socket.emit('alert', { text: 'Did you try password?' });
+        if (!userPublic.admin) {
+          socket.emit('alert', { text: 'Admin access required' });
           break;
         }
         // Find the target user by name
@@ -969,6 +1103,11 @@ case 'ultrabless':
         no: active.no
       });
     }
+  });
+
+  // Add moderator event
+  socket.on('moderator', function(data) {
+    // This is handled client-side
   });
 
   socket.on('disconnect', function() {

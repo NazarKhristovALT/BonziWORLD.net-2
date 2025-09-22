@@ -1,3 +1,19 @@
 {
-    "godmode_password": "nasrshboolsfornow"
-} 
+    "godmode_password": "nasrshboolsfornow",
+    "moderator_password": "youcantsharemodes",
+    "image_whitelist": [
+        "files.catbox.moe",
+        "litter.catbox.moe",
+        "web.archive.org",
+        "i.ibb.co",
+        "media.tenor.com",
+        "i.imgur.com"
+    ],
+    "video_whitelist": [
+        "files.catbox.moe",
+        "i.ibb.co",
+        "web.archive.org",
+        "media.tenor.com",
+        "i.imgur.com"
+    ]
+}
