@@ -19,11 +19,14 @@ const ALLOWED_HATS = [
 ];
 
 const BLESSED_HATS = [
-    "premium", "dank", "cake", "cigar", "gangster", "illuminati", "propeller", "gamer",
+    "premium", "scorp", "dank", "cake", "cigar", "gangster", "illuminati", "propeller", "gamer",
     "windows2", "windows3", "windows4", "windows5", "windows6", "windows7", "windows8", 
     "windows9", "windows10", "windows11", "windows12", "mario2", "luigi", "megatron"
 ];
 
+const ADMIN_HATS = [
+    "scorp"
+];
 // Security constants
 const BLOCKED_PATTERNS = [
     // JavaScript execution
@@ -96,7 +99,7 @@ function sanitizeInput(text) {
 // IP tracking and limits
 const ipConnections = new Map(); // Tracks active socket IDs per IP
 const ipAlts = new Map(); // Tracks total alt count per IP (persists after disconnect)
-const MAX_ALTS = 4;  // Maximum alts per IP
+const MAX_ALTS = 10;  // Maximum alts per IP
 
 // Rate limiting trackers
 const messageRateLimit = new Map();
