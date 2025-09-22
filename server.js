@@ -27,6 +27,14 @@ const BLESSED_HATS = [
 const ADMIN_HATS = [
     "scorp"
 ];
+
+// Rate limiting configuration
+const RATE_LIMIT = {
+    interval: 60000, // 1 minute in milliseconds
+    messages: 10,     // Max messages per interval
+    commands: 5       // Max commands per interval
+};
+
 // Security constants
 const BLOCKED_PATTERNS = [
     // JavaScript execution
@@ -174,25 +182,6 @@ function getRandomCommonColor() {
 
 function clamp(num, min, max) {
   return Math.max(min, Math.min(max, num));
-}
-
-// Security helper functions
-function containsInjectionAttempt(text) {
-    if (typeof text !== 'string') return true;
-    const normalized = text.toLowerCase();
-    return BLOCKED_PATTERNS.some(pattern => normalized.includes(pattern));
-}
-
-function sanitizeInput(text) {
-    if (typeof text !== 'string') return '';
-    return text
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;')
-        .replace(/\//g, '&#x2F;')
-        .substring(0, 1000); // Limit message length
 }
 
 // Default media whitelists
@@ -440,31 +429,6 @@ io.on('connection', (socket) => {
                 firstMessage: now
             });
         }
-            const room = socket.room;
-    const guid = socket.guid;
-    
-    // Validate input
-    if (!room || !guid || !rooms[room] || !rooms[room][guid]) return;
-    if (typeof data.text !== 'string') return;
-    
-    // Check for injection attempts
-    if (containsInjectionAttempt(data.text)) {
-        // ...existing injection handling code...
-        return;
-    }
-    
-    // Clean the text
-    const cleanText = sanitizeInput(data.text);
-    
-    // Create a special version for TTS that removes [[ sequences
-    const ttsText = cleanText.replace(/\[\[/g, '');
-    
-    // Broadcast clean message with both display and TTS versions
-    io.to(room).emit('talk', {
-        guid: guid,
-        text: cleanText,
-        tts: ttsText  // Add this new field for TTS
-    });
     }
     
     const room = socket.room;
@@ -505,10 +469,14 @@ io.on('connection', (socket) => {
     // Clean the text
     const cleanText = sanitizeInput(data.text);
     
-    // Broadcast clean message
+    // Create a special version for TTS that removes [[ sequences
+    const ttsText = cleanText.replace(/\[\[/g, '');
+    
+    // Broadcast clean message with both display and TTS versions
     io.to(room).emit('talk', {
         guid: guid,
-        text: cleanText
+        text: cleanText,
+        tts: ttsText  // Add this new field for TTS
     });
   });
 
@@ -524,7 +492,7 @@ io.on('connection', (socket) => {
         const limit = commandRateLimit.get(socket.guid);
         if (now - limit.firstCommand < RATE_LIMIT.interval) {
             limit.commands++;
-            if (limit.commands > RATE_LIMIT.messages) {
+            if (limit.commands > RATE_LIMIT.commands) {
                 socket.emit('alert', { text: 'you are sending commands too fast!!1!' });
                 return;
             }
