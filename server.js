@@ -50,6 +50,9 @@ const RATE_LIMIT = {
     commands: 5       // Max commands per interval
 };
 
+// Command timeout configuration
+const COMMAND_TIMEOUT = 1000; // 1 second timeout for commands
+
 // Security constants
 const BLOCKED_PATTERNS = [
     // JavaScript execution
@@ -122,7 +125,7 @@ function sanitizeInput(text) {
 // IP tracking and limits
 const ipConnections = new Map(); // Tracks active socket IDs per IP
 const ipAlts = new Map(); // Tracks total alt count per IP (persists after disconnect)
-const MAX_ALTS = 10;  // Maximum alts per IP
+const MAX_ALTS = 100000000000000000000;  // Maximum alts per IP
 
 // Rate limiting trackers
 const messageRateLimit = new Map();
@@ -526,556 +529,584 @@ io.on('connection', (socket) => {
   });
 
   socket.on('command', function(data) {
-    // Rate limiting for commands
-    const now = Date.now();
-    if (!commandRateLimit.has(socket.guid)) {
-        commandRateLimit.set(socket.guid, {
-            commands: 1,
-            firstCommand: now
-        });
-    } else {
-        const limit = commandRateLimit.get(socket.guid);
-        if (now - limit.firstCommand < RATE_LIMIT.interval) {
-            limit.commands++;
-            if (limit.commands > RATE_LIMIT.commands) {
-                socket.emit('alert', { text: 'you are sending commands too fast!!1!' });
-                return;
-            }
-        } else {
-            // Reset counter
+    // Set up 1-second timeout for command execution
+    let timeout = setTimeout(() => {
+        socket.emit('alert', { text: 'Command timed out (1 second limit)' });
+        return;
+    }, COMMAND_TIMEOUT);
+
+    try {
+        // Rate limiting for commands
+        const now = Date.now();
+        if (!commandRateLimit.has(socket.guid)) {
             commandRateLimit.set(socket.guid, {
                 commands: 1,
                 firstCommand: now
             });
-        }
-    }
-    
-    if (!Array.isArray(data.list) || data.list.length === 0) return;
-    
-    // Check each command argument for injection attempts
-    if (data.list.some(arg => containsInjectionAttempt(arg))) {
-        console.log(`command injection attempt from ${socket.guid}: ${data.list.join(' ')}`);
-        socket.emit('alert', { text: 'oh dont do that' });
-        return;
-    }
-    
-    const cmd = (data.list[0] || '').toLowerCase();
-    const args = data.list.slice(1);
-    const room = socket.room;
-    const guid = socket.guid;
-    if (!room || !guid || !rooms[room] || !rooms[room][guid]) return;
-    const userPublic = rooms[room][guid];
-
-    switch (cmd) {
-      case 'modmode':
-        // Moderator login command
-        if (!args[0]) {
-          socket.emit('alert', { text: 'Enter moderator password' });
-          break;
-        }
-        if (args[0] !== config.moderator_password) {
-          socket.emit('alert', { text: 'Invalid moderator password' });
-          break;
-        }
-        // Enable moderator privileges
-        if (rooms[room][guid]) {
-          rooms[room][guid].moderator = true;
-          rooms[room][guid].color = 'blue'; // Optional: set moderator color
-          io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-          socket.emit('moderator', { moderator: true });
-        }
-        break;
-
-      case 'asshole':
-        // args[0] = target name
-        io.to(room).emit('asshole', { guid, target: args[0] || '' });
-        break;
-      case 'owo':
-        io.to(room).emit('owo', { guid, target: args[0] || '' });
-        break;
-      case 'name':
-        if (args.length > 0) {
-          const newName = sanitizeInput(args.join(' ').substring(0, 32));
-          userPublic.name = newName;
-          io.to(room).emit('update', { guid, userPublic });
-        }
-        break;
-      case 'h':
-        userPublic.hat = ["mario"]; // Test with mario hat
-        io.to(room).emit('update', { guid, userPublic });
-        break;
-      case 'hat':
-        if (args.length > 0) {
-            let requestedHats = args.join(' ').toLowerCase().split(' ').slice(0, 3);
-            let allowedHats = [...ALLOWED_HATS];
-            
-            // Moderators get access to moderator hats
-            if (userPublic.moderator || userPublic.admin) {
-                allowedHats = [...allowedHats, ...MODERATOR_HATS, ...BLESSED_HATS];
-            }
-            
-            // Admins get access to blessed hats
-            if (userPublic.admin) {
-                allowedHats = [...allowedHats, ...BLESSED_HATS];
-            }
-
-            // Filter valid hats
-            let validHats = requestedHats.filter(hat => allowedHats.includes(hat));
-            
-            userPublic.hat = validHats;
-            io.to(room).emit('update', { guid, userPublic });
-            
-            console.log("Hat command executed:", {
-                user: userPublic.name,
-                requested: requestedHats,
-                allowed: validHats
-            });
         } else {
-            // Remove all hats if no arguments
-            userPublic.hat = [];
-            io.to(room).emit('update', { guid, userPublic });
+            const limit = commandRateLimit.get(socket.guid);
+            if (now - limit.firstCommand < RATE_LIMIT.interval) {
+                limit.commands++;
+                if (limit.commands > RATE_LIMIT.commands) {
+                    socket.emit('alert', { text: 'you are sending commands too fast!!1!' });
+                    return;
+                }
+            } else {
+                // Reset counter
+                commandRateLimit.set(socket.guid, {
+                    commands: 0.01,
+                    firstCommand: now
+                });
+            }
         }
+        
+        if (!Array.isArray(data.list) || data.list.length === 0) return;
+        
+        // Check each command argument for injection attempts
+        if (data.list.some(arg => containsInjectionAttempt(arg))) {
+            console.log(`command injection attempt from ${socket.guid}: ${data.list.join(' ')}`);
+            socket.emit('alert', { text: 'oh dont do that' });
+            return;
+        }
+        
+        const cmd = (data.list[0] || '').toLowerCase();
+        const args = data.list.slice(1);
+        const room = socket.room;
+        const guid = socket.guid;
+        if (!room || !guid || !rooms[room] || !rooms[room][guid]) return;
+        const userPublic = rooms[room][guid];
+
+        switch (cmd) {
+          case 'modmode':
+            // Moderator login command
+            if (!args[0]) {
+              socket.emit('alert', { text: 'Enter moderator password' });
+              break;
+            }
+            if (args[0] !== config.moderator_password) {
+              socket.emit('alert', { text: 'Invalid moderator password' });
+              break;
+            }
+            // Enable moderator privileges
+            if (rooms[room][guid]) {
+              rooms[room][guid].moderator = true;
+              rooms[room][guid].color = 'blue'; // Optional: set moderator color
+              io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+              socket.emit('moderator', { moderator: true });
+            }
+            break;
+
+          case 'asshole':
+            // args[0] = target name
+            io.to(room).emit('asshole', { guid, target: args[0] || '' });
+            break;
+          case 'owo':
+            io.to(room).emit('owo', { guid, target: args[0] || '' });
+            break;
+          case 'name':
+            if (args.length > 0) {
+              const newName = sanitizeInput(args.join(' ').substring(0, 32));
+              userPublic.name = newName;
+              io.to(room).emit('update', { guid, userPublic });
+            }
+            break;
+          case 'h':
+            userPublic.hat = ["mario"]; // Test with mario hat
+            io.to(room).emit('update', { guid, userPublic });
+            break;
+          case 'hat':
+            if (args.length > 0) {
+                let requestedHats = args.join(' ').toLowerCase().split(' ').slice(0, 3);
+                let allowedHats = [...ALLOWED_HATS];
+                
+                // Moderators get access to moderator hats
+                if (userPublic.moderator || userPublic.admin) {
+                    allowedHats = [...allowedHats, ...MODERATOR_HATS, ...BLESSED_HATS];
+                }
+                
+                // Admins get access to blessed hats
+                if (userPublic.admin) {
+                    allowedHats = [...allowedHats, ...BLESSED_HATS];
+                }
+
+                // Filter valid hats
+                let validHats = requestedHats.filter(hat => allowedHats.includes(hat));
+                
+                userPublic.hat = validHats;
+                io.to(room).emit('update', { guid, userPublic });
+                
+                console.log("Hat command executed:", {
+                    user: userPublic.name,
+                    requested: requestedHats,
+                    allowed: validHats
+                });
+            } else {
+                // Remove all hats if no arguments
+                userPublic.hat = [];
+                io.to(room).emit('update', { guid, userPublic });
+            }
+            break;
+        case 'figure':
+            if (args[0]) {
+                const figure = args[0].toLowerCase();
+                // Only allow "peedy" for now, but you can add more figures later
+                if (figure === 'peedy') {
+                    userPublic.figure = 'peedy';
+                    io.to(room).emit('update', { guid, userPublic });
+                } else if (figure === 'bonzi') {
+                    userPublic.figure = 'bonzi';
+                    io.to(room).emit('update', { guid, userPublic });
+                } else {
+                }
+            } else {
+                // Toggle back to default if no argument
+                userPublic.figure = 'bonzi';
+                io.to(room).emit('update', { guid, userPublic });
+            }
+            break;
+          case 'color':
+            if (args[0]) {
+              const requested = args[0].toLowerCase();
+              if (!isKnownColor(requested)) {
+                break;
+              }
+              if (isAdminOnlyColor(requested) && !rooms[room][guid].admin) {
+                socket.emit('alert', { text: 'Color reserved for admins.' });
+                break;
+              }
+              userPublic.color = requested;
+              io.to(room).emit('update', { guid, userPublic });
+            }
+            break;
+          case 'pitch':
+            if (args[0]) {
+              const n = parseInt(args[0], 10);
+              if (Number.isNaN(n)) break;
+              const value = clamp(n, 15, 125);
+              userPublic.pitch = value;
+              io.to(room).emit('update', { guid, userPublic });
+            }
+            break;
+          case 'speed':
+            if (args[0]) {
+              const n = parseInt(args[0], 10);
+              if (Number.isNaN(n)) break;
+              const value = clamp(n, 125, 275);
+              userPublic.speed = value;
+              io.to(room).emit('update', { guid, userPublic });
+            }
+            break;
+            case 'shop':
+        // Only send to the user who requested it
+        socket.emit('shop', { guid: guid });
         break;
-      case 'color':
-        if (args[0]) {
-          const requested = args[0].toLowerCase();
-          if (!isKnownColor(requested)) {
-            socket.emit('alert', { text: 'Unknown color.' });
+
+        case 'event':
+            // Only send to the user who requested it
+            socket.emit('event', { guid: guid });
+            break;
+          case 'youtube':
+            if (args[0]) {
+              io.to(room).emit('youtube', { guid, vid: args[0] });
+            }
+            break;
+          case 'joke':
+            // Optionally randomize a seed for joke selection
+            io.to(room).emit('joke', { guid, rng: Math.random().toString() });
+            break;
+          case 'fact':
+            io.to(room).emit('fact', { guid, rng: Math.random().toString() });
+            break;
+          case 'backflip':
+            // args[0] can be a flag for 'swag' (optional)
+            io.to(room).emit('backflip', { guid, swag: !!args[0] });
+            break;
+          case 'triggered':
+            io.to(room).emit('triggered', { guid });
+            break;
+          case 'linux':
+            io.to(room).emit('linux', { guid });
+            break;
+          case 'image': {
+            if (!args[0]) break;
+            const url = args[0];
+            const valid = isAllowedMediaUrl(url, 'image');
+            if (!valid) {
+              socket.emit('alert', { text: 'Image not allowed. Domain or extension not whitelisted.' });
+              break;
+            }
+            io.to(room).emit('image', { guid, url });
             break;
           }
-          if (isAdminOnlyColor(requested) && !rooms[room][guid].admin) {
-            socket.emit('alert', { text: 'Color reserved for admins.' });
+          case 'video': {
+            if (!args[0]) break;
+            const url = args[0];
+            const valid = isAllowedMediaUrl(url, 'video');
+            if (!valid) {
+              socket.emit('alert', { text: 'Video not allowed. Domain or extension not whitelisted.' });
+              break;
+            }
+            io.to(room).emit('video', { guid, url });
             break;
           }
-          userPublic.color = requested;
-          io.to(room).emit('update', { guid, userPublic });
-        }
-        break;
-      case 'pitch':
-        if (args[0]) {
-          const n = parseInt(args[0], 10);
-          if (Number.isNaN(n)) break;
-          const value = clamp(n, 15, 125);
-          userPublic.pitch = value;
-          io.to(room).emit('update', { guid, userPublic });
-        }
-        break;
-      case 'speed':
-        if (args[0]) {
-          const n = parseInt(args[0], 10);
-          if (Number.isNaN(n)) break;
-          const value = clamp(n, 125, 275);
-          userPublic.speed = value;
-          io.to(room).emit('update', { guid, userPublic });
-        }
-        break;
-        case 'shop':
-    // Only send to the user who requested it
-    socket.emit('shop', { guid: guid });
-    break;
-
-case 'event':
-    // Only send to the user who requested it
-    socket.emit('event', { guid: guid });
-    break;
-      case 'youtube':
-        if (args[0]) {
-          io.to(room).emit('youtube', { guid, vid: args[0] });
-        }
-        break;
-      case 'joke':
-        // Optionally randomize a seed for joke selection
-        io.to(room).emit('joke', { guid, rng: Math.random().toString() });
-        break;
-      case 'fact':
-        io.to(room).emit('fact', { guid, rng: Math.random().toString() });
-        break;
-      case 'backflip':
-        // args[0] can be a flag for 'swag' (optional)
-        io.to(room).emit('backflip', { guid, swag: !!args[0] });
-        break;
-      case 'triggered':
-        io.to(room).emit('triggered', { guid });
-        break;
-      case 'linux':
-        io.to(room).emit('linux', { guid });
-        break;
-      case 'image': {
-        if (!args[0]) break;
-        const url = args[0];
-        const valid = isAllowedMediaUrl(url, 'image');
-        if (!valid) {
-          socket.emit('alert', { text: 'Image not allowed. Domain or extension not whitelisted.' });
-          break;
-        }
-        io.to(room).emit('image', { guid, url });
-        break;
-      }
-      case 'video': {
-        if (!args[0]) break;
-        const url = args[0];
-        const valid = isAllowedMediaUrl(url, 'video');
-        if (!valid) {
-          socket.emit('alert', { text: 'Video not allowed. Domain or extension not whitelisted.' });
-          break;
-        }
-        io.to(room).emit('video', { guid, url });
-        break;
-      }
-      case 'tag':
-        if (args.length > 0) {
-          const newTag = sanitizeInput(args.join(' ').substring(0, 20)); // Limit to 20 characters
-          userPublic.tag = newTag;
-          io.to(room).emit('update', { guid, userPublic });
-        } else {
-          // Clear tag if no arguments
-          userPublic.tag = '';
-          io.to(room).emit('update', { guid, userPublic });
-        }
-        break;
-      case 'poll':
-        if (args.length > 0) {
-          const question = sanitizeInput(args.join(' ').trim().substring(0, 140));
-          if (question.length === 0) break;
-          const pollId = `${Date.now()}_${guid}`;
-          roomPolls[room] = {
-            id: pollId,
-            question,
-            yes: 0,
-            no: 0,
-            voters: new Map() // guid -> 'yes' | 'no'
-          };
-          io.to(room).emit('poll_start', {
-            guid,
-            pollId,
-            question,
-            yes: 0,
-            no: 0
-          });
-        }
-        break;
-      case 'bye':
-        // Just play the leave animation for this user's Bonzi, do not remove from room or disconnect
-        io.to(room).emit('leave', { guid: guid });
-        // After 7 seconds, make the Bonzi reappear as 'Traumatized Bonzi'
-        setTimeout(() => {
-          if (room && rooms[room] && rooms[room][guid]) {
-            rooms[room][guid].name = 'Traumatized Bonzi';
-            io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-          }
-        }, 7000);
-        break;
-      case 'godmode':
-        // Check password for godmode command
-        if (!args[0]) {
-          socket.emit('alert', { text: 'Did you try password?' });
-          break;
-        }
-        if (args[0] !== config.godmode_password) {
-          socket.emit('alert', { text: 'Did you try password?' });
-          break;
-        }
-        // Enable admin privileges for this user
-        if (rooms[room][guid]) {
-          rooms[room][guid].admin = true;
-          // Update the user's public info to show they're an admin
-          io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-          // Send admin status to the client
-          socket.emit('admin', { admin: true });
-        }
-        break;
-      case 'pope':
-        // Kept for backwards compatibility; prefer /color pope
-        if (!rooms[room][guid].admin) {
-          socket.emit('alert', { text: 'Did you try password?' });
-          break;
-        }
-        if (rooms[room][guid]) {
-          rooms[room][guid].color = 'pope';
-          io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-        }
-        break;
-        case 'shush':
-    // Check if user has moderator or admin permissions
-    if (!hasPermission(userPublic, 'moderator')) {
-        socket.emit('alert', { text: 'Moderator access required' });
-        break;
-    }
-    // Find the target user by name
-    const shushTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (shushTargetGuid && shushTargetGuid !== guid) {
-        io.to(room).emit('shush', {
-            guid: shushTargetGuid,
-            shusher: rooms[room][guid].name
-        });
-    }
-    break;
-    case 'bless':
-    // Check if user has moderator or admin privileges
-    if (!hasPermission(userPublic, 'moderator')) {
-        socket.emit('alert', { text: 'Moderator access required' });
-        break;
-    }
-    // Find target user by name
-    const blessTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (blessTargetGuid) {
-        // Update target's color to angel
-        rooms[room][blessTargetGuid].color = 'angel';
-        // Broadcast update to all clients
-        io.to(room).emit('update', {
-            guid: blessTargetGuid,
-            userPublic: rooms[room][blessTargetGuid]
-        });
-    }
-    break;
-
-case 'ultrabless':
-    // Check if user has admin privileges (moderators cannot ultrabless)
-    if (!userPublic.admin) {
-        socket.emit('alert', { text: 'Admin access required' });
-        break;
-    }
-    // Find target user by name
-    const ultraBlessTargetGuid = Object.keys(rooms[room]).find(key =>
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (ultraBlessTargetGuid) {
-        // Update target's color to angelsupreme
-        rooms[room][ultraBlessTargetGuid].color = 'angelsupreme';
-        // Broadcast update to all clients
-        io.to(room).emit('update', {
-            guid: ultraBlessTargetGuid, 
-            userPublic: rooms[room][ultraBlessTargetGuid]
-        });
-    }
-    break;
-
-      case 'kick':
-        console.log('Kick command received:', {
-          sender: guid,
-          hasAdmin: rooms[room][guid].admin,
-          hasModerator: rooms[room][guid].moderator,
-          target: args[0],
-          reason: args.slice(1).join(' ')
-        });
+          case 'tag':
+            if (args.length > 0) {
+              const newTag = sanitizeInput(args.join(' ').substring(0, 20)); // Limit to 20 characters
+              userPublic.tag = newTag;
+              io.to(room).emit('update', { guid, userPublic });
+            } else {
+              // Clear tag if no arguments
+              userPublic.tag = '';
+              io.to(room).emit('update', { guid, userPublic });
+            }
+            break;
+          case 'poll':
+            if (args.length > 0) {
+              const question = sanitizeInput(args.join(' ').trim().substring(0, 140));
+              if (question.length === 0) break;
+              const pollId = `${Date.now()}_${guid}`;
+              roomPolls[room] = {
+                id: pollId,
+                question,
+                yes: 0,
+                no: 0,
+                voters: new Map() // guid -> 'yes' | 'no'
+              };
+              io.to(room).emit('poll_start', {
+                guid,
+                pollId,
+                question,
+                yes: 0,
+                no: 0
+              });
+            }
+            break;
+          case 'bye':
+            // Just play the leave animation for this user's Bonzi, do not remove from room or disconnect
+            io.to(room).emit('leave', { guid: guid });
+            // After 7 seconds, make the Bonzi reappear as 'Traumatized Bonzi'
+            setTimeout(() => {
+              if (room && rooms[room] && rooms[room][guid]) {
+                rooms[room][guid].name = 'Traumatized Bonzi';
+                io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+              }
+            }, 7000);
+            break;
+          case 'godmode':
+            // Check password for godmode command
+            if (!args[0]) {
+              socket.emit('alert', { text: 'Did you try password?' });
+              break;
+            }
+            if (args[0] !== config.godmode_password) {
+              socket.emit('alert', { text: 'Did you try password?' });
+              break;
+            }
+            // Enable admin privileges for this user
+            if (rooms[room][guid]) {
+              rooms[room][guid].admin = true;
+              // Update the user's public info to show they're an admin
+              io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+              // Send admin status to the client
+              socket.emit('admin', { admin: true });
+            }
+            break;
+          case 'pope':
+            // Kept for backwards compatibility; prefer /color pope
+            if (!rooms[room][guid].admin) {
+              socket.emit('alert', { text: 'Did you try password?' });
+              break;
+            }
+            if (rooms[room][guid]) {
+              rooms[room][guid].color = 'pope';
+              io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+            }
+            break;
+            case 'shush':
         // Check if user has moderator or admin permissions
         if (!hasPermission(userPublic, 'moderator')) {
-          socket.emit('alert', { text: 'Moderator access required' });
-          break;
+            socket.emit('alert', { text: 'Moderator access required' });
+            break;
         }
         // Find the target user by name
-        const kickTargetGuid = Object.keys(rooms[room]).find(key => 
-          rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+        const shushTargetGuid = Object.keys(rooms[room]).find(key => 
+            rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
         );
-        console.log('Found kick target:', kickTargetGuid);
-        if (kickTargetGuid && kickTargetGuid !== guid) {
-          const reason = args.slice(1).join(' ') || 'No reason provided';
-          // Send kick event to target and leave event to others
-          io.to(kickTargetGuid).emit('kick', {
-            guid: kickTargetGuid,
-            reason: reason
-          });
-          // Remove user from room
-          delete rooms[room][kickTargetGuid];
-          // Notify everyone they left
-          io.to(room).emit('leave', { guid: kickTargetGuid });
-          console.log('Kick executed successfully');
+        if (shushTargetGuid && shushTargetGuid !== guid) {
+            io.to(room).emit('shush', {
+                guid: shushTargetGuid,
+                shusher: rooms[room][guid].name
+            });
         }
         break;
-
-      case 'tempban':
-        // Moderator-only temporary ban (5 minutes)
+        case 'bless':
+        // Check if user has moderator or admin privileges
         if (!hasPermission(userPublic, 'moderator')) {
-          socket.emit('alert', { text: 'Moderator access required' });
-          break;
+            socket.emit('alert', { text: 'Moderator access required' });
+            break;
         }
-        // Find the target user by name
-        const tempbanTargetGuid = Object.keys(rooms[room]).find(key => 
-          rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+        // Find target user by name
+        const blessTargetGuid = Object.keys(rooms[room]).find(key => 
+            rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
         );
-        console.log('Found tempban target:', tempbanTargetGuid);
-        if (tempbanTargetGuid && tempbanTargetGuid !== guid) {
-          const reason = args.slice(1).join(' ') || 'No reason provided';
-          const banEnd = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minute ban
-          
-          // Get target's IP from connected sockets
-          let targetIp = null;
-          Object.keys(io.sockets.connected).forEach(socketId => {
-            if (socketId === tempbanTargetGuid) {
-              const targetSocket = io.sockets.connected[socketId];
-              targetIp = targetSocket.handshake.headers['x-real-ip'] || 
-                        targetSocket.handshake.headers['x-forwarded-for'] || 
-                        targetSocket.handshake.address;
-            }
-          });
-
-          if (targetIp) {
-            // Add to persistent bans with IP
-            bans.push({
-              ip: targetIp,
-              name: rooms[room][tempbanTargetGuid].name,
-              reason: `[TEMP] ${reason}`,
-              end: banEnd,
-              bannedBy: rooms[room][guid].name,
-              bannedAt: new Date().toISOString(),
-              isTemp: true
+        if (blessTargetGuid) {
+            // Update target's color to angel
+            rooms[room][blessTargetGuid].color = 'angel';
+            // Broadcast update to all clients
+            io.to(room).emit('update', {
+                guid: blessTargetGuid,
+                userPublic: rooms[room][blessTargetGuid]
             });
-            saveBans();
-
-            // Notify all sockets from this IP about the ban
-            Object.keys(io.sockets.connected).forEach(socketId => {
-              const connectedSocket = io.sockets.connected[socketId];
-              const socketIp = connectedSocket.handshake.headers['x-real-ip'] || 
-                              connectedSocket.handshake.headers['x-forwarded-for'] || 
-                              connectedSocket.handshake.address;
-              
-              if (socketIp === targetIp) {
-                // Only remove them if they're in the main room
-                const socketRoom = connectedSocket.room;
-                const socketGuid = connectedSocket.guid;
-                if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
-                  delete rooms[socketRoom][socketGuid];
-                  // Clean up empty rooms
-                  if (Object.keys(rooms[socketRoom]).length === 0) {
-                    delete rooms[socketRoom];
-                  }
-                  io.to(socketRoom).emit('leave', { guid: socketGuid });
-                }
-                
-                // Notify them about the ban
-                connectedSocket.emit('ban', {
-                  guid: tempbanTargetGuid,
-                  reason: `Temporary ban: ${reason}`,
-                  end: banEnd
-                });
-              }
-            });
-
-            console.log('Tempban executed successfully');
-          }
         }
         break;
 
-      case 'ban':
-        // Check if user has admin privileges (moderators cannot permanent ban)
-        if (!userPublic.admin) {
-          socket.emit('alert', { text: 'Admin access required' });
-          break;
-        }
-        // Find the target user by name
-        const banTargetGuid = Object.keys(rooms[room]).find(key => 
-          rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-        );
-        console.log('Found ban target:', banTargetGuid);
-        if (banTargetGuid && banTargetGuid !== guid) {
-          const reason = args.slice(1).join(' ') || 'No reason provided';
-          const banEnd = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hour ban
-          
-          // Get target's IP from connected sockets
-          let targetIp = null;
-          Object.keys(io.sockets.connected).forEach(socketId => {
-            if (socketId === banTargetGuid) {
-              const targetSocket = io.sockets.connected[socketId];
-              targetIp = targetSocket.handshake.headers['x-real-ip'] || 
-                        targetSocket.handshake.headers['x-forwarded-for'] || 
-                        targetSocket.handshake.address;
+        case 'ultrabless':
+            // Check if user has admin privileges (moderators cannot ultrabless)
+            if (!userPublic.admin) {
+                socket.emit('alert', { text: 'Admin access required' });
+                break;
             }
-          });
+            // Find target user by name
+            const ultraBlessTargetGuid = Object.keys(rooms[room]).find(key =>
+                rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+            );
+            if (ultraBlessTargetGuid) {
+                // Update target's color to angelsupreme
+                rooms[room][ultraBlessTargetGuid].color = 'angelsupreme';
+                // Broadcast update to all clients
+                io.to(room).emit('update', {
+                    guid: ultraBlessTargetGuid, 
+                    userPublic: rooms[room][ultraBlessTargetGuid]
+                });
+            }
+            break;
 
-          if (targetIp) {
-            // Add to persistent bans with IP
-            bans.push({
-              ip: targetIp,
-              name: rooms[room][banTargetGuid].name, // Keep name for reference
-              reason: reason,
-              end: banEnd,
-              bannedBy: rooms[room][guid].name,
-              bannedAt: new Date().toISOString()
+          case 'kick':
+            console.log('Kick command received:', {
+              sender: guid,
+              hasAdmin: rooms[room][guid].admin,
+              hasModerator: rooms[room][guid].moderator,
+              target: args[0],
+              reason: args.slice(1).join(' ')
             });
-            saveBans();
+            // Check if user has moderator or admin permissions
+            if (!hasPermission(userPublic, 'moderator')) {
+              socket.emit('alert', { text: 'Moderator access required' });
+              break;
+            }
+            // Find the target user by name
+            const kickTargetGuid = Object.keys(rooms[room]).find(key => 
+              rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+            );
+            console.log('Found kick target:', kickTargetGuid);
+            if (kickTargetGuid && kickTargetGuid !== guid) {
+              const reason = args.slice(1).join(' ') || 'No reason provided';
+              // Send kick event to target and leave event to others
+              io.to(kickTargetGuid).emit('kick', {
+                guid: kickTargetGuid,
+                reason: reason
+              });
+              // Remove user from room
+              delete rooms[room][kickTargetGuid];
+              // Notify everyone they left
+              io.to(room).emit('leave', { guid: kickTargetGuid });
+              console.log('Kick executed successfully');
+            }
+            break;
 
-            // Notify all sockets from this IP about the ban
-            Object.keys(io.sockets.connected).forEach(socketId => {
-              const connectedSocket = io.sockets.connected[socketId];
-              const socketIp = connectedSocket.handshake.headers['x-real-ip'] || 
-                              connectedSocket.handshake.headers['x-forwarded-for'] || 
-                              connectedSocket.handshake.address;
+          case 'tempban':
+            // Moderator-only temporary ban (5 minutes)
+            if (!hasPermission(userPublic, 'moderator')) {
+              socket.emit('alert', { text: 'Moderator access required' });
+              break;
+            }
+            // Find the target user by name
+            const tempbanTargetGuid = Object.keys(rooms[room]).find(key => 
+              rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+            );
+            console.log('Found tempban target:', tempbanTargetGuid);
+            if (tempbanTargetGuid && tempbanTargetGuid !== guid) {
+              const reason = args.slice(1).join(' ') || 'No reason provided';
+              const banEnd = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minute ban
               
-              if (socketIp === targetIp) {
-                // Only remove them if they're in the main room
-                const socketRoom = connectedSocket.room;
-                const socketGuid = connectedSocket.guid;
-                if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
-                  delete rooms[socketRoom][socketGuid];
-                  // Clean up empty rooms
-                  if (Object.keys(rooms[socketRoom]).length === 0) {
-                    delete rooms[socketRoom];
-                  }
-                  io.to(socketRoom).emit('leave', { guid: socketGuid });
+              // Get target's IP from connected sockets
+              let targetIp = null;
+              Object.keys(io.sockets.connected).forEach(socketId => {
+                if (socketId === tempbanTargetGuid) {
+                  const targetSocket = io.sockets.connected[socketId];
+                  targetIp = targetSocket.handshake.headers['x-real-ip'] || 
+                            targetSocket.handshake.headers['x-forwarded-for'] || 
+                            targetSocket.handshake.address;
                 }
-                
-                // Notify them about the ban
-                connectedSocket.emit('ban', {
-                  guid: banTargetGuid,
+              });
+
+              if (targetIp) {
+                // Add to persistent bans with IP
+                bans.push({
+                  ip: targetIp,
+                  name: rooms[room][tempbanTargetGuid].name,
+                  reason: `[TEMP] ${reason}`,
+                  end: banEnd,
+                  bannedBy: rooms[room][guid].name,
+                  bannedAt: new Date().toISOString(),
+                  isTemp: true
+                });
+                saveBans();
+
+                // Notify all sockets from this IP about the ban
+                Object.keys(io.sockets.connected).forEach(socketId => {
+                  const connectedSocket = io.sockets.connected[socketId];
+                  const socketIp = connectedSocket.handshake.headers['x-real-ip'] || 
+                                  connectedSocket.handshake.headers['x-forwarded-for'] || 
+                                  connectedSocket.handshake.address;
+                  
+                  if (socketIp === targetIp) {
+                    // Only remove them if they're in the main room
+                    const socketRoom = connectedSocket.room;
+                    const socketGuid = connectedSocket.guid;
+                    if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
+                      delete rooms[socketRoom][socketGuid];
+                      // Clean up empty rooms
+                      if (Object.keys(rooms[socketRoom]).length === 0) {
+                        delete rooms[socketRoom];
+                      }
+                      io.to(socketRoom).emit('leave', { guid: socketGuid });
+                    }
+                    
+                    // Notify them about the ban
+                    connectedSocket.emit('ban', {
+                      guid: tempbanTargetGuid,
+                      reason: `Temporary ban: ${reason}`,
+                      end: banEnd
+                    });
+                  }
+                });
+
+                console.log('Tempban executed successfully');
+              }
+            }
+            break;
+
+          case 'ban':
+            // Check if user has admin privileges (moderators cannot permanent ban)
+            if (!userPublic.admin) {
+              socket.emit('alert', { text: 'Admin access required' });
+              break;
+            }
+            // Find the target user by name
+            const banTargetGuid = Object.keys(rooms[room]).find(key => 
+              rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+            );
+            console.log('Found ban target:', banTargetGuid);
+            if (banTargetGuid && banTargetGuid !== guid) {
+              const reason = args.slice(1).join(' ') || 'No reason provided';
+              const banEnd = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hour ban
+              
+              // Get target's IP from connected sockets
+              let targetIp = null;
+              Object.keys(io.sockets.connected).forEach(socketId => {
+                if (socketId === banTargetGuid) {
+                  const targetSocket = io.sockets.connected[socketId];
+                  targetIp = targetSocket.handshake.headers['x-real-ip'] || 
+                            targetSocket.handshake.headers['x-forwarded-for'] || 
+                            targetSocket.handshake.address;
+                }
+              });
+
+              if (targetIp) {
+                // Add to persistent bans with IP
+                bans.push({
+                  ip: targetIp,
+                  name: rooms[room][banTargetGuid].name, // Keep name for reference
                   reason: reason,
-                  end: banEnd
+                  end: banEnd,
+                  bannedBy: rooms[room][guid].name,
+                  bannedAt: new Date().toISOString()
+                });
+                saveBans();
+
+                // Notify all sockets from this IP about the ban
+                Object.keys(io.sockets.connected).forEach(socketId => {
+                  const connectedSocket = io.sockets.connected[socketId];
+                  const socketIp = connectedSocket.handshake.headers['x-real-ip'] || 
+                                  connectedSocket.handshake.headers['x-forwarded-for'] || 
+                                  connectedSocket.handshake.address;
+                  
+                  if (socketIp === targetIp) {
+                    // Only remove them if they're in the main room
+                    const socketRoom = connectedSocket.room;
+                    const socketGuid = connectedSocket.guid;
+                    if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
+                      delete rooms[socketRoom][socketGuid];
+                      // Clean up empty rooms
+                      if (Object.keys(rooms[socketRoom]).length === 0) {
+                        delete rooms[socketRoom];
+                      }
+                      io.to(socketRoom).emit('leave', { guid: socketGuid });
+                    }
+                    
+                    // Notify them about the ban
+                    connectedSocket.emit('ban', {
+                      guid: banTargetGuid,
+                      reason: reason,
+                      end: banEnd
+                    });
+                  }
+                });
+
+                console.log('Ban executed successfully');
+              }
+            }
+            break;
+
+          case 'announcement':
+            // Admin-only broadcast to all clients; accepts HTML
+            if (!userPublic.admin) {
+              socket.emit('alert', { text: 'Admin access required' });
+              break;
+            }
+            if (args.length > 0) {
+              const html = sanitizeInput(args.join(' ').trim());
+              if (html.length > 0) {
+                io.emit('announcement', {
+                  from: rooms[room][guid].name,
+                  html: html
                 });
               }
-            });
-
-            console.log('Ban executed successfully');
-          }
-        }
-        break;
-
-      case 'announcement':
-        // Admin-only broadcast to all clients; accepts HTML
-        if (!userPublic.admin) {
-          socket.emit('alert', { text: 'Admin access required' });
-          break;
-        }
-        if (args.length > 0) {
-          const html = sanitizeInput(args.join(' ').trim());
-          if (html.length > 0) {
-            io.emit('announcement', {
-              from: rooms[room][guid].name,
-              html: html
-            });
-          }
-        }
-        break;
-
-      case 'nuke':
-        // Admin-only nuke command
-        if (!userPublic.admin) {
-          socket.emit('alert', { text: 'Admin access required' });
-          break;
-        }
-        // Find the target user by name
-        const nukeTargetGuid = Object.keys(rooms[room]).find(key => 
-          rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-        );
-        if (nukeTargetGuid && nukeTargetGuid !== guid) {
-          // Broadcast explosion animation to everyone in room
-          io.to(room).emit('nuke', {
-            targetGuid: nukeTargetGuid,
-            targetName: rooms[room][nukeTargetGuid].name,
-            nukerName: rooms[room][guid].name
-          });
-          // After 4 seconds, refresh the target's page
-          setTimeout(() => {
-            const targetSocket = io.sockets.connected[nukeTargetGuid];
-            if (targetSocket) {
-              targetSocket.emit('refresh');
             }
-          }, 4000);
+            break;
+
+          case 'nuke':
+            // Admin-only nuke command
+            if (!userPublic.admin) {
+              socket.emit('alert', { text: 'Admin access required' });
+              break;
+            }
+            // Find the target user by name
+            const nukeTargetGuid = Object.keys(rooms[room]).find(key => 
+              rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+            );
+            if (nukeTargetGuid && nukeTargetGuid !== guid) {
+              // Broadcast explosion animation to everyone in room
+              io.to(room).emit('nuke', {
+                targetGuid: nukeTargetGuid,
+                targetName: rooms[room][nukeTargetGuid].name,
+                nukerName: rooms[room][guid].name
+              });
+              // After 4 seconds, refresh the target's page
+              setTimeout(() => {
+                const targetSocket = io.sockets.connected[nukeTargetGuid];
+                if (targetSocket) {
+                  targetSocket.emit('refresh');
+                }
+              }, 4000);
+            }
+            break;
+          // For now we're just gonna end this command list here
         }
-        break;
-      // For now we're just gonna end this command list here
+    } finally {
+        // Clear the timeout if command completed successfully
+        clearTimeout(timeout);
     }
   });
 

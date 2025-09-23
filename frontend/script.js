@@ -256,17 +256,30 @@ function linkify(a) {
     return a.replace(b, "<a href='$1' target='_blank'>$1</a>");
 }
 function loadBonzis(a) {
-    var manifest = ALL_COLORS.map(function(c){ return { id: "bonzi" + capitalizeFirst(c), src: "./img/bonzi/" + c + ".png" }; });
+    // Load both Bonzi and Peedy assets for all colors
+    var manifest = [];
+    
+    // Load Bonzi figures
+    ALL_COLORS.forEach(function(c){ 
+        manifest.push({ id: "bonzi_" + c, src: "./img/bonzi/" + c + ".png" });
+    });
+    
+    // Load Peedy figures  
+    ALL_COLORS.forEach(function(c){ 
+        manifest.push({ id: "peedy_" + c, src: "./img/peedy/" + c + ".png" });
+    });
+    
     manifest.push({ id: "topjej", src: "./img/misc/topjej.png" });
+    
     loadQueue.loadManifest(manifest),
-        loadQueue.on(
-            "fileload",
-            function (a) {
-                loadDone.push(a.item.id);
-            },
-            this
-        ),
-        a && loadQueue.on("complete", a, this);
+    loadQueue.on(
+        "fileload",
+        function (a) {
+            loadDone.push(a.item.id);
+        },
+        this
+    ),
+    a && loadQueue.on("complete", a, this);
 }
 function loadTest() {
     $("#login_card").hide(),
@@ -510,8 +523,10 @@ var _createClass = (function () {
         function a(b, c) {
             var d = this;
             _classCallCheck(this, a),
-                (this.userPublic = c || { name: "BonziBUDDY", color: "purple", speed: 175, pitch: 50, voice: "en-us" }),
+                (this.userPublic = c || { name: "BonziBUDDY", color: "purple", speed: 175, pitch: 50, voice: "en-us", figure: 'bonzi' }),
                 (this.color = this.userPublic.color),
+                (this.figure = this.userPublic.figure || 'bonzi')
+                
                 this.colorPrev,
                 (this.data = window.BonziData),
                 (this.drag = !1),
@@ -1287,17 +1302,35 @@ $.contextMenu({
                         ]);
                     },
                 },
-                {
-                    key: "updateSprite",
-                    value: function (a) {
-                        var b = BonziHandler.stage;
-                        this.cancel(),
-                            b.removeChild(this.sprite),
-                            this.colorPrev != this.color && (delete this.sprite, (this.sprite = new createjs.Sprite(BonziHandler.spriteSheets[this.color], a ? "gone" : "idle"))),
-                            b.addChild(this.sprite),
-                            this.move();
-                    },
-                },
+{
+    key: "updateSprite",
+    value: function (a) {
+        var b = BonziHandler.stage;
+        this.cancel();
+        b.removeChild(this.sprite);
+        
+        // Check if we need to update the sprite due to color or figure change
+        if (this.colorPrev != this.color || this.figurePrev != this.figure) {
+            delete this.sprite;
+            
+            // Get the appropriate sprite sheet based on figure
+            var spriteSheet;
+            if (this.figure === 'peedy' && BonziHandler.spriteSheets.peedy && BonziHandler.spriteSheets.peedy[this.color]) {
+                spriteSheet = BonziHandler.spriteSheets.peedy[this.color];
+            } else {
+                // Default to bonzi if peedy not available or figure is bonzi
+                spriteSheet = BonziHandler.spriteSheets.bonzi[this.color];
+            }
+            
+            this.sprite = new createjs.Sprite(spriteSheet, a ? "gone" : "idle");
+        }
+        
+        b.addChild(this.sprite);
+        this.move();
+        this.colorPrev = this.color;
+        this.figurePrev = this.figure;
+    },
+},
                 {
                     key: "explode",
                     value: function () {
@@ -1628,13 +1661,33 @@ $.contextMenu({
             return (
                 (this.framerate = 1 / 15),
                 (this.spriteSheets = {}),
-                (this.prepSprites = function () {
-                    for (var b = 0; b < ALL_COLORS.length; b++) {
-                        var c = ALL_COLORS[b],
-                            d = { images: ["./img/bonzi/" + c + ".png"], frames: BonziData.sprite.frames, animations: BonziData.sprite.animations };
-                        this.spriteSheets[c] = new createjs.SpriteSheet(d);
-                    }
-                }),
+(this.prepSprites = function () {
+    // Create sprite sheets for both figures
+    this.spriteSheets = {
+        bonzi: {},
+        peedy: {}
+    };
+    
+    for (var b = 0; b < ALL_COLORS.length; b++) {
+        var c = ALL_COLORS[b];
+        
+        // Bonzi sprite sheets
+        var bonziData = { 
+            images: ["./img/bonzi/" + c + ".png"], 
+            frames: BonziData.sprite.frames, 
+            animations: BonziData.sprite.animations 
+        };
+        this.spriteSheets.bonzi[c] = new createjs.SpriteSheet(bonziData);
+        
+        // Peedy sprite sheets (using same animation data)
+        var peedyData = { 
+            images: ["./img/peedy/" + c + ".png"], 
+            frames: BonziData.sprite.frames, 
+            animations: BonziData.sprite.animations 
+        };
+        this.spriteSheets.peedy[c] = new createjs.SpriteSheet(peedyData);
+    }
+}),
                 this.prepSprites(),
                 (this.$canvas = $("#bonzi_canvas")),
                 (this.stage = new createjs.StageGL(this.$canvas[0], { transparent: !0 })),
@@ -1676,17 +1729,26 @@ $.contextMenu({
                     1e3 / 60
                 )),
                 $(window).resize(this.resize.bind(this)),
-                (this.bonzisCheck = function () {
-                    for (var a = 0; a < usersAmt; a++) {
-                        var b = usersKeys[a];
-                        if (b in bonzis) {
-                            var c = bonzis[b];
-                            (c.userPublic = usersPublic[b]), c.updateName();
-                            var d = usersPublic[b].color;
-                            c.color != d && ((c.color = d), c.updateSprite());
-                        } else bonzis[b] = new Bonzi(b, usersPublic[b]);
-                    }
-                }),
+(this.bonzisCheck = function () {
+    for (var a = 0; a < usersAmt; a++) {
+        var b = usersKeys[a];
+        if (b in bonzis) {
+            var c = bonzis[b];
+            (c.userPublic = usersPublic[b]), c.updateName();
+            var d = usersPublic[b].color;
+            var e = usersPublic[b].figure || 'bonzi'; // Get figure or default to bonzi
+            
+            // Check if color OR figure changed
+            if (c.color != d || c.figure != e) {
+                c.color = d;
+                c.figure = e;
+                c.updateSprite();
+            }
+        } else {
+            bonzis[b] = new Bonzi(b, usersPublic[b]);
+        }
+    }
+}),
                 $("#btn_tile").click(function () {
                     for (var a = $(window).width(), b = $(window).height(), c = 0, d = 80, e = 0, f = 0, g = 0; g < usersAmt; g++) {
                         var h = usersKeys[g];
@@ -1710,9 +1772,13 @@ $.contextMenu({
     Object.defineProperty(Array.prototype, "equals", { enumerable: !1 });
 var loadQueue = new createjs.LoadQueue(),
     loadDone = [];
-    var loadNeeded = ALL_COLORS.map(function(c){ 
-    return "bonzi" + capitalizeFirst(c); 
-}).concat(["topjej"]);
+    var loadNeeded = [];
+// Load both bonzi and peedy assets for all colors
+ALL_COLORS.forEach(function(c){ 
+    loadNeeded.push("bonzi_" + c);
+    loadNeeded.push("peedy_" + c);
+});
+loadNeeded.push("topjej");
 
 // Add hats to the loading queue as needed
 function loadHats() {
