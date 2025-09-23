@@ -653,6 +653,54 @@ $.contextMenu({
                     }
                 }
             };
+            items.moderator.items.moduser = {
+    name: "Make Moderator",
+    callback: function() {
+        if (confirm("Make " + d.userPublic.name + " a moderator?")) {
+            socket.emit('command', { list: ["moduser", d.userPublic.name] });
+        }
+    }
+};
+
+items.moderator.items.unmoduser = {
+    name: "Remove Moderator",
+    callback: function() {
+        if (confirm("Remove moderator status from " + d.userPublic.name + "?")) {
+            socket.emit('command', { list: ["unmoduser", d.userPublic.name] });
+        }
+    }
+};
+
+items.moderator.items.changecolor = {
+    name: "Change Color",
+    callback: function() {
+        var newColor = prompt("Enter new color for " + d.userPublic.name + ":", d.userPublic.color);
+        if (newColor !== null && newColor.trim() !== '') {
+            socket.emit('command', { list: ["changecolor", d.userPublic.name, newColor.trim()] });
+        }
+    }
+};
+
+items.moderator.items.changename = {
+    name: "Change Name",
+    callback: function() {
+        var newName = prompt("Enter new name for " + d.userPublic.name + ":", d.userPublic.name);
+        if (newName !== null && newName.trim() !== '') {
+            socket.emit('command', { list: ["changename", d.userPublic.name, newName.trim()] });
+        }
+    }
+};
+
+items.moderator.items.changetag = {
+    name: "Change Tag",
+    callback: function() {
+        var currentTag = d.userPublic.tag || '';
+        var newTag = prompt("Enter new tag for " + d.userPublic.name + ":", currentTag);
+        if (newTag !== null) {
+            socket.emit('command', { list: ["changetag", d.userPublic.name, newTag] });
+        }
+    }
+};
         }
 
         // Admin-only options
@@ -680,6 +728,7 @@ $.contextMenu({
                     }
                 }
             };
+            
         }
 
         return { items: items };
@@ -1673,7 +1722,7 @@ $.contextMenu({
         
         // Bonzi sprite sheets
         var bonziData = { 
-            images: ["./img/bonzi/" + c + ".png"], 
+            images: ["./img/bonzi/" + c + ".webp"], 
             frames: BonziData.sprite.frames, 
             animations: BonziData.sprite.animations 
         };
@@ -1681,7 +1730,7 @@ $.contextMenu({
         
         // Peedy sprite sheets (using same animation data)
         var peedyData = { 
-            images: ["./img/peedy/" + c + ".png"], 
+            images: ["./img/peedy/" + c + ".webp"], 
             frames: BonziData.sprite.frames, 
             animations: BonziData.sprite.animations 
         };

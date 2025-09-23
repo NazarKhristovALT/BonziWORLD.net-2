@@ -815,6 +815,152 @@ io.on('connection', (socket) => {
             });
         }
         break;
+        case 'moduser':
+    // Admin-only mod promotion
+    if (!userPublic.admin) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    // Find the target user by name
+    const modTargetGuid = Object.keys(rooms[room]).find(key => 
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    console.log('Found mod target:', modTargetGuid);
+    if (modTargetGuid && modTargetGuid !== guid) {
+        // Promote to moderator
+        rooms[room][modTargetGuid].moderator = true;
+        rooms[room][modTargetGuid].color = 'blue'; // Moderator color
+        
+        // Notify the promoted user
+        io.to(modTargetGuid).emit('moderator', { moderator: true });
+        
+        // Broadcast update to all clients
+        io.to(room).emit('update', {
+            guid: modTargetGuid,
+            userPublic: rooms[room][modTargetGuid]
+        });
+        
+        socket.emit('alert', { text: 'User promoted to moderator' });
+        console.log('Mod promotion executed successfully');
+    }
+    break;
+
+case 'unmoduser':
+    // Admin-only mod removal
+    if (!userPublic.admin) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    // Find the target user by name
+    const unmodTargetGuid = Object.keys(rooms[room]).find(key => 
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    console.log('Found unmod target:', unmodTargetGuid);
+    if (unmodTargetGuid && unmodTargetGuid !== guid) {
+        // Remove moderator status
+        rooms[room][unmodTargetGuid].moderator = false;
+        rooms[room][unmodTargetGuid].color = getRandomCommonColor(); // Reset to random color
+        
+        // Notify the demoted user
+        io.to(unmodTargetGuid).emit('moderator', { moderator: false });
+        
+        // Broadcast update to all clients
+        io.to(room).emit('update', {
+            guid: unmodTargetGuid,
+            userPublic: rooms[room][unmodTargetGuid]
+        });
+        
+        socket.emit('alert', { text: 'User demoted from moderator' });
+        console.log('Mod removal executed successfully');
+    }
+    break;
+
+case 'changecolor':
+    // Admin-only color change for other users
+    if (!userPublic.admin) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    if (args.length < 2) {
+        socket.emit('alert', { text: 'Usage: /changecolor [username] [color]' });
+        break;
+    }
+    // Find the target user by name
+    const colorTargetGuid = Object.keys(rooms[room]).find(key => 
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    if (colorTargetGuid) {
+        const requestedColor = args[1].toLowerCase();
+        if (!isKnownColor(requestedColor)) {
+            socket.emit('alert', { text: 'Unknown color' });
+            break;
+        }
+        if (isAdminOnlyColor(requestedColor) && !rooms[room][colorTargetGuid].admin) {
+            socket.emit('alert', { text: 'Color reserved for admins.' });
+            break;
+        }
+        rooms[room][colorTargetGuid].color = requestedColor;
+        io.to(room).emit('update', {
+            guid: colorTargetGuid,
+            userPublic: rooms[room][colorTargetGuid]
+        });
+        socket.emit('alert', { text: 'Color changed successfully' });
+    }
+    break;
+
+case 'changename':
+    // Admin-only name change for other users
+    if (!userPublic.admin) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    if (args.length < 2) {
+        socket.emit('alert', { text: 'Usage: /changename [username] [new name]' });
+        break;
+    }
+    // Find the target user by name
+    const nameTargetGuid = Object.keys(rooms[room]).find(key => 
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    if (nameTargetGuid) {
+        const newName = sanitizeInput(args.slice(1).join(' ').substring(0, 32));
+        if (newName.length === 0) {
+            socket.emit('alert', { text: 'Invalid name' });
+            break;
+        }
+        rooms[room][nameTargetGuid].name = newName;
+        io.to(room).emit('update', {
+            guid: nameTargetGuid,
+            userPublic: rooms[room][nameTargetGuid]
+        });
+        socket.emit('alert', { text: 'Name changed successfully' });
+    }
+    break;
+
+case 'changetag':
+    // Admin-only tag change for other users
+    if (!userPublic.admin) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    if (args.length < 2) {
+        socket.emit('alert', { text: 'Usage: /changetag [username] [new tag]' });
+        break;
+    }
+    // Find the target user by name
+    const tagTargetGuid = Object.keys(rooms[room]).find(key => 
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    if (tagTargetGuid) {
+        const newTag = sanitizeInput(args.slice(1).join(' ').substring(0, 20));
+        rooms[room][tagTargetGuid].tag = newTag;
+        io.to(room).emit('update', {
+            guid: tagTargetGuid,
+            userPublic: rooms[room][tagTargetGuid]
+        });
+        socket.emit('alert', { text: 'Tag changed successfully' });
+    }
+    break;
         case 'bless':
         // Check if user has moderator or admin privileges
         if (!hasPermission(userPublic, 'moderator')) {
