@@ -43,11 +43,10 @@ const MODERATOR_USERS = [
     "trustedUser2"
 ];
 
-// Rate limiting configuration
+// Rate limiting configuration (only for messages)
 const RATE_LIMIT = {
     interval: 60000, // 1 minute in milliseconds
-    messages: 10,     // Max messages per interval
-    commands: 5       // Max commands per interval
+    messages: 10     // Max messages per interval
 };
 
 // Command timeout configuration
@@ -127,9 +126,8 @@ const ipConnections = new Map(); // Tracks active socket IDs per IP
 const ipAlts = new Map(); // Tracks total alt count per IP (persists after disconnect)
 const MAX_ALTS = 100000000000000000000;  // Maximum alts per IP
 
-// Rate limiting trackers
+// Rate limiting trackers (only for messages)
 const messageRateLimit = new Map();
-const commandRateLimit = new Map();
 
 // Cleanup function to remove old IP entries
 function cleanupIpAlts() {
@@ -536,29 +534,7 @@ io.on('connection', (socket) => {
     }, COMMAND_TIMEOUT);
 
     try {
-        // Rate limiting for commands
-        const now = Date.now();
-        if (!commandRateLimit.has(socket.guid)) {
-            commandRateLimit.set(socket.guid, {
-                commands: 1,
-                firstCommand: now
-            });
-        } else {
-            const limit = commandRateLimit.get(socket.guid);
-            if (now - limit.firstCommand < RATE_LIMIT.interval) {
-                limit.commands++;
-                if (limit.commands > RATE_LIMIT.commands) {
-                    socket.emit('alert', { text: 'you are sending commands too fast!!1!' });
-                    return;
-                }
-            } else {
-                // Reset counter
-                commandRateLimit.set(socket.guid, {
-                    commands: 0.01,
-                    firstCommand: now
-                });
-            }
-        }
+        // No command rate limiting - removed the command rate limiting logic
         
         if (!Array.isArray(data.list) || data.list.length === 0) return;
         
@@ -988,7 +964,7 @@ io.on('connection', (socket) => {
             break;
 
           case 'ban':
-            // Check if user has admin privileges (moderators cannot permanent ban)
+            // Admin-only permanent ban
             if (!userPublic.admin) {
               socket.emit('alert', { text: 'Admin access required' });
               break;
@@ -1000,7 +976,7 @@ io.on('connection', (socket) => {
             console.log('Found ban target:', banTargetGuid);
             if (banTargetGuid && banTargetGuid !== guid) {
               const reason = args.slice(1).join(' ') || 'No reason provided';
-              const banEnd = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hour ban
+              const banEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year ban
               
               // Get target's IP from connected sockets
               let targetIp = null;
@@ -1017,11 +993,12 @@ io.on('connection', (socket) => {
                 // Add to persistent bans with IP
                 bans.push({
                   ip: targetIp,
-                  name: rooms[room][banTargetGuid].name, // Keep name for reference
+                  name: rooms[room][banTargetGuid].name,
                   reason: reason,
                   end: banEnd,
                   bannedBy: rooms[room][guid].name,
-                  bannedAt: new Date().toISOString()
+                  bannedAt: new Date().toISOString(),
+                  isTemp: false
                 });
                 saveBans();
 
@@ -1059,120 +1036,114 @@ io.on('connection', (socket) => {
             }
             break;
 
-          case 'announcement':
-            // Admin-only broadcast to all clients; accepts HTML
+          case 'unban':
+            // Admin-only unban
             if (!userPublic.admin) {
               socket.emit('alert', { text: 'Admin access required' });
               break;
             }
-            if (args.length > 0) {
-              const html = sanitizeInput(args.join(' ').trim());
-              if (html.length > 0) {
-                io.emit('announcement', {
-                  from: rooms[room][guid].name,
-                  html: html
-                });
-              }
+            // Find ban by IP or name
+            const search = args[0];
+            if (!search) {
+              socket.emit('alert', { text: 'Provide IP or username to unban' });
+              break;
+            }
+            
+            // Remove matching bans
+            const initialLength = bans.length;
+            bans = bans.filter(ban => ban.ip !== search && ban.name.toLowerCase() !== search.toLowerCase());
+            
+            if (bans.length < initialLength) {
+              saveBans();
+              socket.emit('alert', { text: 'User unbanned successfully' });
+            } else {
+              socket.emit('alert', { text: 'No matching ban found' });
             }
             break;
 
-          case 'nuke':
-            // Admin-only nuke command
+          case 'bans':
+            // Admin-only ban list
             if (!userPublic.admin) {
               socket.emit('alert', { text: 'Admin access required' });
               break;
             }
-            // Find the target user by name
-            const nukeTargetGuid = Object.keys(rooms[room]).find(key => 
-              rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-            );
-            if (nukeTargetGuid && nukeTargetGuid !== guid) {
-              // Broadcast explosion animation to everyone in room
-              io.to(room).emit('nuke', {
-                targetGuid: nukeTargetGuid,
-                targetName: rooms[room][nukeTargetGuid].name,
-                nukerName: rooms[room][guid].name
+            // Send current ban list to admin
+            socket.emit('bans_list', { bans: bans });
+            break;
+
+          case 'pollvote':
+            if (!roomPolls[room]) break;
+            if (args[0] === 'yes' || args[0] === 'no') {
+              const vote = args[0];
+              const poll = roomPolls[room];
+              if (poll.voters.has(guid)) {
+                // Already voted, change vote
+                const oldVote = poll.voters.get(guid);
+                if (oldVote === 'yes') poll.yes--;
+                else poll.no--;
+              }
+              poll.voters.set(guid, vote);
+              if (vote === 'yes') poll.yes++;
+              else poll.no++;
+              io.to(room).emit('poll_update', {
+                pollId: poll.id,
+                yes: poll.yes,
+                no: poll.no
               });
-              // After 4 seconds, refresh the target's page
-              setTimeout(() => {
-                const targetSocket = io.sockets.connected[nukeTargetGuid];
-                if (targetSocket) {
-                  targetSocket.emit('refresh');
-                }
-              }, 4000);
             }
             break;
-          // For now we're just gonna end this command list here
+
+          case 'pollend':
+            if (!roomPolls[room]) break;
+            if (hasPermission(userPublic, 'moderator')) {
+              const poll = roomPolls[room];
+              io.to(room).emit('poll_end', {
+                pollId: poll.id,
+                yes: poll.yes,
+                no: poll.no
+              });
+              delete roomPolls[room];
+            }
+            break;
+
+          default:
+            // Unknown command
+            break;
         }
     } finally {
-        // Clear the timeout if command completed successfully
         clearTimeout(timeout);
     }
   });
 
-  // Vote handler
-  socket.on('poll_vote', function(data) {
+  socket.on('disconnect', function() {
+    console.log('User disconnected:', socket.id);
     const room = socket.room;
     const guid = socket.guid;
-    if (!room || !guid) return;
-    const active = roomPolls[room];
-    if (!active || !data || data.pollId !== active.id) return;
-    const choice = data.choice === 'yes' ? 'yes' : (data.choice === 'no' ? 'no' : null);
-    if (!choice) return;
-    // adjust counts for change of mind
-    const prev = active.voters.get(guid);
-    if (prev === choice) {
-      // no change
-    } else {
-      if (prev === 'yes') active.yes = Math.max(0, active.yes - 1);
-      if (prev === 'no') active.no = Math.max(0, active.no - 1);
-      if (choice === 'yes') active.yes += 1; else active.no += 1;
-      active.voters.set(guid, choice);
-      io.to(room).emit('poll_update', {
-        pollId: active.id,
-        yes: active.yes,
-        no: active.no
-      });
-    }
-  });
 
-  // Add moderator event
-  socket.on('moderator', function(data) {
-    // This is handled client-side
-  });
-
-  socket.on('disconnect', function() {
-    // Remove from active connections tracking and reset IP count
-    if (ipConnections.has(clientIp)) {
-      ipConnections.get(clientIp).delete(socket.id);
-      if (ipConnections.get(clientIp).size === 0) {
+    // Remove from IP tracking
+    if (clientIp && ipConnections.has(clientIp)) {
+      const connections = ipConnections.get(clientIp);
+      connections.delete(socket.id);
+      if (connections.size === 0) {
         ipConnections.delete(clientIp);
-        // Reset alt count when all connections are gone
-        if (ipAlts.has(clientIp)) {
-          ipAlts.delete(clientIp);
-        }
       }
     }
 
-    // Clean up rate limiting
-    messageRateLimit.delete(socket.guid);
-    commandRateLimit.delete(socket.guid);
-
-    const room = socket.room;
-    const guid = socket.guid;
-    if (room && rooms[room] && rooms[room][guid]) {
-      // Remove user
+    // Remove from room
+    if (room && guid && rooms[room] && rooms[room][guid]) {
       delete rooms[room][guid];
-      // Notify others
-      socket.to(room).emit('leave', { guid: guid });
       // Clean up empty rooms
       if (Object.keys(rooms[room]).length === 0) {
         delete rooms[room];
+      } else {
+        // Notify others in the room
+        socket.to(room).emit('leave', { guid: guid });
       }
     }
   });
 });
 
+// Start the server
 server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log('Server running at http://localhost:80');
 });
