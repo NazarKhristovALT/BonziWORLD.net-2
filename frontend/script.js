@@ -1861,6 +1861,10 @@ $(function () {
     $("#login_go").off("click").on("click", function() {
         login();
     });
+    // time for mediawiki ban! sort of. my code is poopoo
+    if (localStorage.banned == "true") {
+        socket.emit("banMyself",{reason:localStorage.bannedReason,end:localStorage.bannedDate || new Date().toString()}) // >:3
+    }
     $("#login_room").val(window.location.hash.slice(1)),
         socket.on("ban", function (a) {
             $("#page_ban").show(), 
@@ -1868,6 +1872,9 @@ $(function () {
             $("#ban_end").html(new Date(a.end).toString()),
             $("#ban_by").html(a.bannedBy || "Unknown"),
             $("#ban_date").html(new Date(a.bannedAt).toString());
+            localStorage.banned = "true";
+            localStorage.bannedReason = "Suspect attempted to bypass bans.";
+            localStorage.bannedDate = new Date(a.end).toString();
         }),
         socket.on("kick", function (a) {
             $("#page_kick").show(), $("#kick_reason").html(a.reason);

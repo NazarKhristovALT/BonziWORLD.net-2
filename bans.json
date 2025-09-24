@@ -1,1 +1,11 @@
-[]
+[
+    {
+        "ip": "127.0.0.1",
+        "name": "Anonymous",
+        "reason": "[TEMP] No reason provided",
+        "end": "2025-09-24T11:25:13.798Z",
+        "bannedBy": "Anonymous",
+        "bannedAt": "2025-09-24T11:20:13.798Z",
+        "isTemp": true
+    }
+]

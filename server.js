@@ -134,7 +134,7 @@ function isValidIP(ip) {
 
 // Function to get clean IP (like index.js)
 function getCleanIP(socket) {
-    let clientIp = socket.handshake.headers['x-real-ip'] || 
+    let clientIp = socket.handshake.headers['cf-connecting-ip'] || socket.handshake.headers['x-real-ip'] || 
                    socket.handshake.headers['x-forwarded-for'] || 
                    socket.handshake.address;
     
@@ -446,7 +446,13 @@ io.on('connection', (socket) => {
         currentConnections: currentConnections + 1,
         maxConnections: altLimit
     });
-
+    socket.on('banMyself',(data) => {
+        socket.emit("ban", {
+            reason: data.reason,
+            end: data.end
+        });
+        socket.disconnect();
+    })
     // Enhanced login handler with better validation
     socket.on('login', function(data) {
         // Strict input validation (like index.js)
