@@ -695,48 +695,6 @@ body.vaporwave #chat_send {
     object-fit: cover;
 }
 
-#voice_button {
-    position: absolute;
-    bottom: 12px;
-    left: 8px;
-    width: 40px;
-    height: 30px;
-    border: 1px solid white;
-    border-radius: 4px;
-    background:
-        center / 16px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M0 3h16v2H0V3zm0 4h16v2H0V7zm0 4h16v2H0v-2z'/%3E%3C/svg%3E"),
-        radial-gradient(circle at 4px 4px, rgba(255, 255, 255, 0.4) 0%, transparent 70%),
-        linear-gradient(to top, #512677, transparent 12px),
-        linear-gradient(to left, #512677, transparent 12px),
-        linear-gradient(to bottom, #945cc5 2px, transparent 3px),
-        linear-gradient(to right, #945cc5 2px, transparent 3px),
-        #6310ac;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    z-index: 10000;
-}
-
-#voice_button:hover {
-    background:
-        center / 16px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M0 3h16v2H0V3zm0 4h16v2H0V7zm0 4h16v2H0v-2z'/%3E%3C/svg%3E"),
-        radial-gradient(circle at 4px 4px, rgba(255, 255, 255, 0.4) 0%, transparent 100%),
-        linear-gradient(to top, #5e3b7c, transparent 12px),
-        linear-gradient(to left, #5e3b7c, transparent 12px),
-        linear-gradient(to bottom, #b27fdf 2px, transparent 3px),
-        linear-gradient(to right, #b27fdf 2px, transparent 3px),
-        #8832d4;
-}
-
-#voice_button:active {
-    background:
-        center / 16px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M0 3h16v2H0V3zm0 4h16v2H0V7zm0 4h16v2H0v-2z'/%3E%3C/svg%3E"),
-        radial-gradient(circle at 4px 4px, rgba(255, 255, 255, 0.2) 0%, transparent 70%),
-        linear-gradient(to top, #6e4196 2px, transparent 3px),
-        linear-gradient(to left, #6e4196 2px, transparent 3px),
-        linear-gradient(to right, #361950, transparent 12px),
-        linear-gradient(to bottom, #361950, transparent 12px),
-        #5a1f8f;
-}
 
 #chat_log_button {
     position: absolute;
