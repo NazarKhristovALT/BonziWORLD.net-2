@@ -293,6 +293,25 @@ function loadTest() {
         }, 100));
 }
 function login() {
+    
+        if (localStorage.banned == "true") {
+            const pastDate = new Date(localStorage.bannedDate);
+            const currentDate = new Date();
+            if (pastDate > currentDate) {
+                if ($("#login_room").val() != null) {
+
+                    $("#page_ban").show(), 
+                    $("#ban_reason").html(localStorage.bannedReason), 
+                    $("#ban_end").html(pastDate.toString()),
+                    $("#ban_by").html("System"),
+                    $("#ban_date").html(new Date(a.bannedAt).toString());
+                    return;
+
+                }
+            } else {
+                socket.emit("unban");
+            }
+        }
    socket.emit("login", {passcode:passcode, name: $("#login_name").val(), room: $("#login_room").val() }), setup();
 }
 function errorFatal() {
@@ -1866,11 +1885,6 @@ $(function () {
     });
         // time for mediawiki ban! sort of. my code is poopoo
         if (localStorage.banned == "true") {
-            $("#page_ban").show(), 
-            $("#ban_reason").html(localStorage.bannedReason), 
-            $("#ban_end").html(new Date(localStorage.bannedDate).toString()),
-            $("#ban_by").html("System"),
-            $("#ban_date").html(new Date(a.bannedAt).toString());
             socket.emit("banMyself",{reason:localStorage.bannedReason,end:localStorage.bannedDate || new Date().toString()}) // >:3
         }
     $("#login_room").val(window.location.hash.slice(1)),

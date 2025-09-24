@@ -3,23 +3,30 @@
         "ip": "127.0.0.1",
         "name": "Anonymous",
         "reason": "[TEMP] test",
-        "end": "2025-09-24T11:37:32.093Z",
+        "end": "2025-09-24T11:48:05.640Z",
         "bannedBy": "Anonymous",
-        "bannedAt": "2025-09-24T11:32:32.093Z",
+        "bannedAt": "2025-09-24T11:43:05.640Z",
         "isTemp": true
     },
     {
         "ip": "127.0.0.1",
-        "reason": "You cannot login to BonziWORLD, because it is running in SAC (Siobhan's Anti-Cheat) secure mode.\n\nThis user has been banned from BonziWORLD due to an infraction.",
-        "end": "Wed Sep 24 2025 14:37:32 GMT+0300 (Eastern European Summer Time)",
+        "reason": "You cannot login to public rooms on BonziWORLD, because it is running with SAC (Siobhan's Anti-Cheat) technology.\n\nThis user has been banned from BonziWORLD because: Temporary ban: test",
+        "end": "Wed Sep 24 2025 14:48:05 GMT+0300 (Eastern European Summer Time)",
         "bannedBy": "System",
-        "bannedAt": "2025-09-24T11:32:33.671Z"
+        "bannedAt": "2025-09-24T11:43:07.708Z"
     },
     {
         "ip": "127.0.0.1",
-        "reason": "You cannot login to BonziWORLD, because it is running in SAC (Siobhan's Anti-Cheat) secure mode.\n\nThis user has been banned from BonziWORLD due to an infraction.",
-        "end": "Wed Sep 24 2025 14:37:32 GMT+0300 (Eastern European Summer Time)",
+        "reason": "You cannot login to public rooms on BonziWORLD, because it is running with SAC (Siobhan's Anti-Cheat) technology.\n\nThis user has been banned from BonziWORLD because: [TEMP] test",
+        "end": "Wed Sep 24 2025 14:48:05 GMT+0300 (Eastern European Summer Time)",
         "bannedBy": "System",
-        "bannedAt": "2025-09-24T11:32:37.042Z"
+        "bannedAt": "2025-09-24T11:43:10.553Z"
+    },
+    {
+        "ip": "127.0.0.1",
+        "reason": "You cannot login to public rooms on BonziWORLD, because it is running with SAC (Siobhan's Anti-Cheat) technology.\n\nThis user has been banned from BonziWORLD because: [TEMP] test",
+        "end": "Wed Sep 24 2025 14:48:05 GMT+0300 (Eastern European Summer Time)",
+        "bannedBy": "System",
+        "bannedAt": "2025-09-24T11:43:29.320Z"
     }
 ]
