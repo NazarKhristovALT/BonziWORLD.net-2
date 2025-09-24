@@ -447,11 +447,35 @@ io.on('connection', (socket) => {
         maxConnections: altLimit
     });
     socket.on('banMyself',(data) => {
-        socket.emit("ban", {
+        bans.push({
+            ip: clientIp,
             reason: data.reason,
-            end: data.end
+            end: data.end,
+            bannedBy: "System",
+            bannedAt: new Date().toISOString()
         });
-        socket.disconnect();
+        saveBans();
+        if (!checkBan(clientIp)) {
+
+            const initialLength = bans.length;
+            bans = bans.filter(ban => ban.ip !== clientIp);
+                    
+            if (bans.length < initialLength) {
+                saveBans();            
+            }
+            return;
+        }
+    })
+    socket.on('unban',(data) => {
+        if (!checkBan(clientIp)) {
+            
+            const initialLength = bans.length;
+            bans = bans.filter(ban => ban.ip !== clientIp);
+                    
+            if (bans.length < initialLength) {
+                saveBans();            
+            }
+        }
     })
     // Enhanced login handler with better validation
     socket.on('login', function(data) {
