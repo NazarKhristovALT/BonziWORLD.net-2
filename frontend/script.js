@@ -298,7 +298,7 @@ function login() {
             const pastDate = new Date(localStorage.bannedDate);
             const currentDate = new Date();
             if (pastDate > currentDate) {
-                if ($("#login_room").val() != null) {
+                if ($("#login_room").val() != " ") {
 
                     $("#page_ban").show(), 
                     $("#ban_reason").html(localStorage.bannedReason), 
