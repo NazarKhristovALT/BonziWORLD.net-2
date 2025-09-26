@@ -1,6 +1,9 @@
 {
     "godmode_password": "nasrshboolsfornow",
     "moderator_password": "youcantsharemodes",
+    "altlimit": 3,
+    "namelimit": 25,
+    "slowmode": 500,
     "image_whitelist": [
         "files.catbox.moe",
         "litter.catbox.moe",

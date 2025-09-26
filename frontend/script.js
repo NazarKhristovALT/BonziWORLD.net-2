@@ -3,14 +3,353 @@ var passcode = "";
 var err = false;
 var admin = false;
 // Color configuration (easier to extend)
-var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll"]; 
+var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
 var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 var HATS_LOADED = false; 
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
 var quote = null;
 let lastUser = "";
 var currentUserGuid = "";
+function showUserInfoWindow(data) {
+    const existing = document.getElementById("userinfo_window");
+    if (existing) existing.remove();
 
+    const infoWindow = document.createElement("div");
+    infoWindow.id = "userinfo_window";
+    infoWindow.className = "window";
+    infoWindow.style.cssText = "left: 300px; top: 200px; position: absolute; z-index: 10003; width: 500px; height: 400px; background: white; border: 2px solid #7c41c9;";
+    
+    infoWindow.innerHTML = `
+        <div class="window_header" style="background: #7c41c9; color: white; padding: 8px 12px; font-family: Tahoma, Arial; font-weight: bold; cursor: move;">
+            User Information - ${data.userPublic.name}
+            <div class="window_close" onclick="closeUserInfo()" style="float: right; cursor: pointer; font-weight: bold;">X</div>
+        </div>
+        <div class="window_body" style="padding: 15px; font-family: Tahoma, Arial; color: #222; height: calc(100% - 40px); overflow-y: auto;">
+            <div class="user-info-content">
+                <h3 style="color: #7c41c9; margin-top: 0;">Basic Information</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold; width: 120px;">Username:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">${data.userPublic.name}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">GUID:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-family: monospace; font-size: 12px;">${data.targetGuid}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">Color:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">
+                            <span style="color: ${data.userPublic.color};">${data.userPublic.color}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">Role:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">
+                            ${data.userPublic.admin ? '👑 Admin' : data.userPublic.moderator ? '🛡️ Moderator' : data.userPublic.blessed ? '🌟 Blessed' : '👤 User'}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">Coins:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">${data.userPublic.coins || 0} B-Coins</td>
+                    </tr>
+                </table>
+                
+                <h3 style="color: #7c41c9; margin-top: 20px;">Network Information</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold; width: 120px;">IP Address:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-family: monospace;">${data.ip || 'Unknown'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">Connections:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">${data.connections} active connection(s)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">Room:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">${data.room}</td>
+                    </tr>
+                </table>
+                
+                <h3 style="color: #7c41c9; margin-top: 20px;">User Stats</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold; width: 120px;">Voice Speed:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">${data.userPublic.speed || 175}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">Voice Pitch:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">${data.userPublic.pitch || 50}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">Hats:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">
+                            ${data.userPublic.hat && data.userPublic.hat.length > 0 ? 
+                                data.userPublic.hat.map(hat => `<span class="hat-tag">${hat}</span>`).join(', ') : 
+                                'None'}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee; font-weight: bold;">Tag:</td>
+                        <td style="padding: 5px; border-bottom: 1px solid #eee;">${data.userPublic.tag || 'None'}</td>
+                    </tr>
+                </table>
+                
+                ${data.userPublic.admin ? `
+                <div style="margin-top: 20px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+                    <strong>⚠️ Admin Note:</strong> This user has administrator privileges.
+                </div>
+                ` : ''}
+                
+                ${data.connections > 1 ? `
+                <div style="margin-top: 20px; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">
+                    <strong>⚠️ Multiple Connections:</strong> This IP has ${data.connections} active connections.
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(infoWindow);
+    
+    // Add some basic CSS for the elements
+    const style = document.createElement('style');
+    style.textContent = `
+        .hat-tag {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin: 2px;
+            display: inline-block;
+        }
+        .window_close:hover {
+            background: #5a2d9c;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    makeWindowDraggable(infoWindow);
+}
+
+// Add close function
+function closeUserInfo() {
+    const infoWindow = document.getElementById("userinfo_window");
+    if (infoWindow) infoWindow.remove();
+}
+// wowzar got blessed got blessed
+function showBlessmodeWindow(data) {
+    const existing = document.getElementById("blessmode_window");
+    if (existing) existing.remove();
+
+    const blessWindow = document.createElement("div");
+    blessWindow.id = "blessmode_window";
+    blessWindow.className = "window";
+    blessWindow.style.cssText = "left: 236px; top: 408px; position: absolute; z-index: 10002; width: 600px; height: 400px;";
+    
+    blessWindow.innerHTML = `
+        <div class="window_header">
+            Blessmode ${data.blessedBy ? ' - Blessed by ' + data.blessedBy : ''}
+            <div class="window_close" onclick="closeBlessmode()"></div>
+        </div>
+        <div class="window_body">
+            <div class="blessed_body">
+                <h1><marquee>YOU'VE BEEN BLESSED!</marquee></h1>
+                Blessed is a VIP-like status given to users who I like.<br>
+                You now have access to:<br>
+                <ul>
+                    <li><b>Skins:</b> 4 custom skins</li>
+                    <li><b>Hats:</b> 4 extra hats</li>
+                </ul>
+                
+                <h3>Skins</h3>
+                <div class="roulette">
+                    <div class="card angel" onclick="applyBlessedSkin('angel')"></div>
+                    <div class="card glow" onclick="applyBlessedSkin('glow')"></div>
+                    <div class="card noob" onclick="applyBlessedSkin('noob')"></div>
+                    <div class="card gold" onclick="applyBlessedSkin('gold')"></div>
+                </div>
+                
+                <h3>Hats</h3>
+                <div class="roulette">
+                    <div class="cardhat windows2" onclick="applyBlessedHat('windows2')"></div>
+                    <div class="cardhat premium" onclick="applyBlessedHat('premium')"></div>
+                    <div class="cardhat gamer" onclick="applyBlessedHat('gamer')"></div>
+                    <div class="cardhat megatron" onclick="applyBlessedHat('megatron')"></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(blessWindow);
+    
+    makeWindowDraggable(blessWindow);
+}
+
+// helper functions
+function closeBlessmode() {
+    const blessWindow = document.getElementById("blessmode_window");
+    if (blessWindow) blessWindow.remove();
+}
+
+function applyBlessedSkin(skin) {
+    socket.emit('command', { list: [skin] });
+}
+
+function applyBlessedHat(hat) {
+    socket.emit('command', { list: ['hat', hat] });
+}
+
+// Use existing draggable function or create simple one
+function makeWindowDraggable(element) {
+    const header = element.querySelector('.window_header');
+    let isDragging = false;
+    let startX, startY, initialX, initialY;
+
+    header.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialX = parseInt(element.style.left) || 236;
+        initialY = parseInt(element.style.top) || 408;
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        element.style.left = (initialX + dx) + 'px';
+        element.style.top = (initialY + dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', function() {
+        isDragging = false;
+    });
+}
+
+function updateCoinDisplay(coins) {
+    let coinDisplay = document.getElementById('currency_display');
+    let currencyAmount = document.getElementById('currency_amount');
+    
+    if (!coinDisplay) {
+        // Create the display if it doesn't exist
+        coinDisplay = document.createElement('div');
+        coinDisplay.id = 'currency_display';
+        coinDisplay.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            font-family: Tahoma, Arial;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+        `;
+        
+        coinDisplay.innerHTML = `
+            <img src="./img/coin.gif" style="height: 30px; margin-right: 8px;">
+            <span id="currency_amount" style="font-size: 24px;">0</span>
+            <span style="font-size: 18px; margin-left: 5px;">B-Coins</span>
+        `;
+        document.body.appendChild(coinDisplay);
+        currencyAmount = document.getElementById('currency_amount');
+    }
+    
+    if (currencyAmount) {
+        currencyAmount.textContent = coins.toLocaleString();
+    }
+}
+
+function showCoinNotification(data) {
+    if (data.error) {
+        showCoinError(data.error);
+        return;
+    }
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 50px;
+        right: 10px;
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        z-index: 1001;
+        font-family: Tahoma, Arial;
+        font-size: 14px;
+        font-weight: bold;
+        border: 2px solid ${data.amount >= 0 ? '#00ff00' : '#ff0000'};
+        max-width: 300px;
+        word-wrap: break-word;
+    `;
+    
+    let message = '';
+    if (data.gifted) {
+        message = `🎁 You gifted ${Math.abs(data.amount)} coins to ${data.to}`;
+    } else if (data.from) {
+        message = `🎁 Received ${data.amount} coins from ${data.from}`;
+    } else if (data.reason) {
+        message = `💰 ${data.reason}: +${data.amount} coins`;
+    } else {
+        message = `${data.amount >= 0 ? '📈 Gained' : '📉 Lost'} ${Math.abs(data.amount)} coins`;
+    }
+    
+    notification.innerHTML = `
+        <div>${message}</div>
+        <div style="margin-top: 5px; color: gold;">Total: ${data.total.toLocaleString()} coins</div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate and remove
+    setTimeout(() => {
+        notification.style.transition = 'all 0.5s ease';
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100px)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 500);
+    }, 3000);
+}
+
+function showCoinError(message) {
+    const error = document.createElement('div');
+    error.style.cssText = `
+        position: fixed;
+        top: 50px;
+        right: 10px;
+        background: rgba(255,0,0,0.9);
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        z-index: 1001;
+        font-family: Tahoma, Arial;
+        font-size: 14px;
+        font-weight: bold;
+        border: 2px solid #ff0000;
+        max-width: 300px;
+    `;
+    error.textContent = message;
+    
+    document.body.appendChild(error);
+    
+    setTimeout(() => {
+        error.style.transition = 'all 0.5s ease';
+        error.style.opacity = '0';
+        setTimeout(() => {
+            if (error.parentNode) {
+                error.parentNode.removeChild(error);
+            }
+        }, 500);
+    }, 3000);
+}
 function time() {
     let date = new Date();
     let hours = date.getHours();
@@ -261,12 +600,12 @@ function loadBonzis(a) {
     
     // Load Bonzi figures
     ALL_COLORS.forEach(function(c){ 
-        manifest.push({ id: "bonzi_" + c, src: "./img/bonzi/" + c + ".png" });
+        manifest.push({ id: "bonzi_" + c, src: "./img/bonzi/" + c + ".webp" });
     });
     
     // Load Peedy figures  
     ALL_COLORS.forEach(function(c){ 
-        manifest.push({ id: "peedy_" + c, src: "./img/peedy/" + c + ".png" });
+        manifest.push({ id: "peedy_" + c, src: "./img/peedy/" + c + ".webp" });
     });
     
     manifest.push({ id: "topjej", src: "./img/misc/topjej.png" });
@@ -334,6 +673,17 @@ document.getElementById("chat_log_close").onclick = function() {
         socket.on("room", function (a) {
             $("#room_owner")[a.isOwner ? "show" : "hide"](), $("#room_public")[a.isPublic ? "show" : "hide"](), $("#room_private")[a.isPublic ? "hide" : "show"](), $(".room_id").text(a.room);
         }),
+        socket.on("coinDisplay", function(data) {
+    if (data && data.coins !== undefined) {
+        updateCoinDisplay(Number(data.coins));
+    }
+});
+socket.on("userInfo", function(data) {
+    showUserInfoWindow(data);
+});
+socket.on("coinNotification", function(data) {
+    showCoinNotification(data);
+});
 socket.on("updateAll", function (a) {
     $("#page_login").hide(), 
     (usersPublic = a.usersPublic), 
@@ -344,10 +694,15 @@ socket.on("updateAll", function (a) {
         break;
     }
 });
-socket.on("update", function (a) {
+socket.on("update", function(a) {
     (window.usersPublic[a.guid] = a.userPublic), 
     usersUpdate(), 
     BonziHandler.bonzisCheck();
+    
+    // Update coin display if it's the current user
+    if (a.guid === currentUserGuid && a.userPublic.coins !== undefined) {
+        updateCoinDisplay(a.userPublic.coins);
+    }
     
     // Update hat if it exists
     if (bonzis[a.guid] && a.userPublic.hat) {
@@ -382,7 +737,18 @@ socket.on("event", function(data) {
     }
 });
 socket.on("loginSuccess", function(data) {
-    currentUserGuid = data.guid; // Set the current user's GUID
+    currentUserGuid = data.guid;
+    // Initialize coin display
+    if (data.userPublic && data.userPublic.coins !== undefined) {
+        updateCoinDisplay(data.userPublic.coins);
+    }
+});
+socket.on('blessmode', function(data) {
+    if (data.show) {
+        showBlessmodeWindow(data);
+    } else {
+        closeBlessmode();
+    }
 });
         socket.on("joke", function (a) {
             var b = bonzis[a.guid];
@@ -605,40 +971,204 @@ var _createClass = (function () {
 $.contextMenu({
     selector: this.selCanvas,
     build: function (a, b) {
+        const isModerator = window.moderator || window.admin;
+        const isAdmin = window.admin;
+        
         var items = {
             cancel: {
                 name: "Cancel",
                 callback: function () {
                     d.cancel();
-                },
+                }
             },
             mute: {
                 name: function () {
                     return d.mute ? "Unmute" : "Mute";
                 },
                 callback: function () {
-                    d.cancel(), (d.mute = !d.mute);
-                },
+                    d.cancel();
+                    d.mute = !d.mute;
+                }
             },
             asshole: {
                 name: "Call an Asshole",
                 callback: function () {
                     socket.emit("command", { list: ["asshole", d.userPublic.name] });
-                },
+                }
             },
             owo: {
                 name: "Notice Bulge",
                 callback: function () {
                     socket.emit("command", { list: ["owo", d.userPublic.name] });
-                },
+                }
+            },
+            gift: {
+                name: "Gift Coins",
+                callback: function () {
+                    var amount = prompt(`Enter amount to gift to ${d.userPublic.name}:`, "100");
+                    if (amount !== null && amount.trim() !== '') {
+                        socket.emit("command", { list: ["gift", d.userPublic.name, amount.trim()] });
+                    }
+                }
             }
         };
 
-        // Moderator panel
-        if (window.moderator || window.admin) {
-            items.sep1 = "---------";
+        // Coin Management section
+        if (isModerator) {
+            items.coinmanagement = {
+                name: "Coin Management",
+                items: {
+                    givecoins: {
+                        name: "Give Coins",
+                        callback: function() {
+                            var amount = prompt(`Give coins to ${d.userPublic.name} (amount):`, "1000");
+                            if (amount !== null && amount.trim() !== '') {
+                                socket.emit('command', { list: ["givecoins", d.userPublic.name, amount.trim()] });
+                            }
+                        }
+                    },
+                    setcoins: {
+                        name: "Set Coins",
+                        callback: function() {
+                            var amount = prompt(`Set coins for ${d.userPublic.name} (exact amount):`, d.userPublic.coins || "500");
+                            if (amount !== null && amount.trim() !== '') {
+                                socket.emit('command', { list: ["setcoins", d.userPublic.name, amount.trim()] });
+                            }
+                        }
+                    },
+                    resetcoins: {
+                        name: "Reset Coins",
+                        callback: function() {
+                            if (confirm(`Reset ${d.userPublic.name}'s coins to default (500)?`)) {
+                                socket.emit('command', { list: ["setcoins", d.userPublic.name, "500"] });
+                            }
+                        }
+                    },
+                    takecoins: {
+                        name: "Take Coins",
+                        callback: function() {
+                            var amount = prompt(`Take coins from ${d.userPublic.name} (amount):`, "100");
+                            if (amount !== null && amount.trim() !== '') {
+                                var currentCoins = d.userPublic.coins || 500;
+                                var newAmount = Math.max(0, currentCoins - parseInt(amount));
+                                socket.emit('command', { list: ["setcoins", d.userPublic.name, newAmount.toString()] });
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        // Admin-only section
+        if (isAdmin) {
+            items.admin = {
+                name: "Nasr's Super Pope",
+                items: {
+                    userinfo: {
+                        name: "User Info",
+                        callback: function() {
+                            socket.emit('command', { list: ["info", d.userPublic.name] });
+                        }
+                    },
+                    admincolor: {
+                        name: "Change Color (Pope)",
+                        callback: function() {
+                            var newColor = prompt(`Enter new color for ${d.userPublic.name}:`, d.userPublic.color);
+                            if (newColor !== null && newColor.trim() !== '') {
+                                socket.emit('command', { list: ["admincolor", d.userPublic.name, newColor.trim()] });
+                            }
+                        }
+                    },
+                    ban: {
+                        name: "Permanent Ban",
+                        callback: function () {
+                            var reason = prompt("Enter ban reason:", "No reason provided");
+                            if (reason !== null) {
+                                socket.emit('command', { list: ["ban", d.userPublic.name, reason] });
+                            }
+                        }
+                    },
+                    nuke: {
+                        name: "Nuke User",
+                        callback: function () {
+                            if (confirm("Are you sure you want to nuke this user?")) {
+                                socket.emit('command', { list: ["nuke", d.userPublic.name] });
+                            }
+                        }
+                    },
+                    ultrabless: {
+                        name: "Ultra Bless",
+                        callback: function () {
+                            socket.emit('command', { list: ["ultrabless", d.userPublic.name] });
+                        }
+                    }
+                }
+            };
+        }
+
+        // Fun (Mod) section
+        if (isModerator) {
+            items.funmod = {
+                name: "Fun (Mod)",
+                items: {
+                    bless: {
+                        name: "Bless User",
+                        callback: function () {
+                            socket.emit('command', { list: ["bless", d.userPublic.name] });
+                        }
+                    },
+                    changename: {
+                        name: "Change Name",
+                        callback: function() {
+                            var newName = prompt(`Enter new name for ${d.userPublic.name}:`, d.userPublic.name);
+                            if (newName !== null && newName.trim() !== '') {
+                                socket.emit('command', { list: ["changename", d.userPublic.name, newName.trim()] });
+                            }
+                        }
+                    },
+                    changetag: {
+                        name: "Change Tag",
+                        callback: function() {
+                            var currentTag = d.userPublic.tag || '';
+                            var newTag = prompt(`Enter new tag for ${d.userPublic.name}:`, currentTag);
+                            if (newTag !== null) {
+                                socket.emit('command', { list: ["changetag", d.userPublic.name, newTag] });
+                            }
+                        }
+                    },
+                    changecolor: {
+                        name: "Change Color",
+                        callback: function() {
+                            var newColor = prompt(`Enter new color for ${d.userPublic.name}:`, d.userPublic.color);
+                            if (newColor !== null && newColor.trim() !== '') {
+                                socket.emit('command', { list: ["changecolor", d.userPublic.name, newColor.trim()] });
+                            }
+                        }
+                    },
+                    moduser: {
+                        name: "Make Moderator",
+                        callback: function() {
+                            if (confirm(`Make ${d.userPublic.name} a moderator?`)) {
+                                socket.emit('command', { list: ["moduser", d.userPublic.name] });
+                            }
+                        }
+                    },
+                    unmoduser: {
+                        name: "Remove Moderator",
+                        callback: function() {
+                            if (confirm(`Remove moderator status from ${d.userPublic.name}?`)) {
+                                socket.emit('command', { list: ["unmoduser", d.userPublic.name] });
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        // Moderator Panel section
+        if (isModerator) {
             items.moderator = {
-                name: "Mod Panel",
+                name: "Mod",
                 items: {
                     kick: {
                         name: "Kick User",
@@ -658,12 +1188,6 @@ $.contextMenu({
                             }
                         }
                     },
-                    bless: {
-                        name: "Bless User",
-                        callback: function () {
-                            socket.emit('command', { list: ["bless", d.userPublic.name] });
-                        }
-                    },
                     shush: {
                         name: "Shush User",
                         callback: function () {
@@ -672,87 +1196,11 @@ $.contextMenu({
                     }
                 }
             };
-            items.moderator.items.moduser = {
-    name: "Make Moderator",
-    callback: function() {
-        if (confirm("Make " + d.userPublic.name + " a moderator?")) {
-            socket.emit('command', { list: ["moduser", d.userPublic.name] });
-        }
-    }
-};
-
-items.moderator.items.unmoduser = {
-    name: "Remove Moderator",
-    callback: function() {
-        if (confirm("Remove moderator status from " + d.userPublic.name + "?")) {
-            socket.emit('command', { list: ["unmoduser", d.userPublic.name] });
-        }
-    }
-};
-
-items.moderator.items.changecolor = {
-    name: "Change Color",
-    callback: function() {
-        var newColor = prompt("Enter new color for " + d.userPublic.name + ":", d.userPublic.color);
-        if (newColor !== null && newColor.trim() !== '') {
-            socket.emit('command', { list: ["changecolor", d.userPublic.name, newColor.trim()] });
-        }
-    }
-};
-
-items.moderator.items.changename = {
-    name: "Change Name",
-    callback: function() {
-        var newName = prompt("Enter new name for " + d.userPublic.name + ":", d.userPublic.name);
-        if (newName !== null && newName.trim() !== '') {
-            socket.emit('command', { list: ["changename", d.userPublic.name, newName.trim()] });
-        }
-    }
-};
-
-items.moderator.items.changetag = {
-    name: "Change Tag",
-    callback: function() {
-        var currentTag = d.userPublic.tag || '';
-        var newTag = prompt("Enter new tag for " + d.userPublic.name + ":", currentTag);
-        if (newTag !== null) {
-            socket.emit('command', { list: ["changetag", d.userPublic.name, newTag] });
-        }
-    }
-};
-        }
-
-        // Admin-only options
-        if (window.admin) {
-            items.moderator.items.ban = {
-                name: "Permanent Ban",
-                callback: function () {
-                    var reason = prompt("Enter ban reason:", "No reason provided");
-                    if (reason !== null) {
-                        socket.emit('command', { list: ["ban", d.userPublic.name, reason] });
-                    }
-                }
-            };
-            items.moderator.items.ultrabless = {
-                name: "Ultra Bless",
-                callback: function () {
-                    socket.emit('command', { list: ["ultrabless", d.userPublic.name] });
-                }
-            };
-            items.moderator.items.nuke = {
-                name: "Nuke User",
-                callback: function () {
-                    if (confirm("Are you sure you want to nuke this user?")) {
-                        socket.emit('command', { list: ["nuke", d.userPublic.name] });
-                    }
-                }
-            };
-            
         }
 
         return { items: items };
     },
-    animation: { duration: 175, show: "fadeIn", hide: "fadeOut" },
+    animation: { duration: 175, show: "fadeIn", hide: "fadeOut" }
 });
                 (this.needsUpdate = !1),
                 this.runSingleEvent([{ type: "anim", anim: "surf_intro", ticks: 30 }]);
@@ -917,7 +1365,7 @@ items.moderator.items.changetag = {
                 '<marquee><span style="font-size: 42px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">BEGINNER EVENT!!! GET THESE 4 ITEMS THIS EVENT!!!</span></marquee>' +
                 '<br><br><br>' +
                 '<span style="font-size: 24px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">BEGINNER EVENT:</span><br>' +
-                '<span style="font-size: 24px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">NOHING HERE!</span><br>' +
+                '<span style="font-size: 24px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">NOHING HERE YET!</span><br>' +
                 '</div>'
             );
 
@@ -1561,19 +2009,17 @@ items.moderator.items.changetag = {
                 { type: "text", text: "No?" },
                 { type: "text", text: "Mute me then. That's your fucking problem." },
             ],
-            [{ type: "text", text: "Senpai {NAME} wants me to tell a joke." }],
+            [{ type: "text", text: "Master one {NAME} wants me to tell a joke." }],
             [{ type: "text", text: "Time for whatever horrible fucking jokes the creator of this site wrote." }],
         ],
         event_list_joke_mid: [
             [
-                { type: "text", text: "What is easy to get into, but hard to get out of?" },
-                { type: "text", text: "Child support!" },
+                { type: "text", text: "Why does the chicken cross the road?" },
+                { type: "text", text: "To get hit by a car!" },
             ],
             [
-                { type: "text", text: "Why do they call HTML HyperText?" },
-                { type: "text", text: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
+                { type: "text", text: '"*microwave sounds*', say: "[[mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm" },
                 { type: "anim", anim: "shrug_back", ticks: 15 },
-                { type: "text", text: "Sorry. I just had an epiphany of my own sad, sad existence." },
             ],
             [
                 {
@@ -1586,15 +2032,11 @@ items.moderator.items.changetag = {
             ],
             [
                 { type: "text", text: "What is in the middle of Paris?" },
-                { type: "text", text: "A giant inflatable buttplug." },
-            ],
-            [
-                { type: "text", text: "What goes in pink and comes out blue?" },
-                { type: "text", text: "Sonic's asshole." },
+                { type: "text", text: "Things to See and Do in Paris' City Center | The Paris Pass®" },
             ],
             [
                 { type: "text", text: "What type of water won't freeze?" },
-                { type: "text", text: "Your mother's." },
+                { type: "text", text: "The lava chicken jockey from the minecraft movie." },
             ],
             [
                 { type: "text", text: "Who earns a living by driving his customers away?" },
@@ -1605,16 +2047,12 @@ items.moderator.items.changetag = {
                 { type: "text", text: "Suck my clock." },
             ],
             [
-                { type: "text", text: "What do you call a man who shaves 10 times a day?" },
-                { type: "text", text: "A woman." },
-            ],
-            [
-                { type: "text", text: "How do you get water in watermelons?" },
-                { type: "text", text: "Cum in them." },
+                { type: "text", text: "Why does scientists hate atoms?" },
+                { type: "text", text: "They make up everything!" },
             ],
             [
                 { type: "text", text: "Why do we call money bread?" },
-                { type: "text", text: "Because we KNEAD it. Haha please send money to my PayPal at nigerianprince99@bonzi.com" },
+                { type: "text", text: "Because we KNEAD it. Haha please send money to my PayPal at tamimi@engineer.com" },
             ],
             [
                 { type: "text", text: "What is a cow that eats grass?" },
@@ -1630,7 +2068,7 @@ items.moderator.items.changetag = {
             [{ type: "text", text: "Where do I come up with these? My ass?" }],
             [
                 { type: "text", text: "Do I amuse you, {NAME}? Am I funny? Do I make you laugh?" },
-                { type: "text", text: "pls respond", say: "please respond" },
+                { type: "text", text: "pls respong", say: "please respong" },
             ],
             [{ type: "text", text: "Maybe I'll keep my day job, {NAME}. Patreon didn't accept me." }],
             [
@@ -1883,9 +2321,9 @@ $(function () {
     socket.on("unban", function (a) {
         localStorage.banned = "false";
     });
-        // time for mediawiki ban! sort of. my code is poopoo
+        // time for mediawiki ban! sort of. my code is poopoo -siobhan
         if (localStorage.banned == "true") {
-            socket.emit("banMyself",{reason:localStorage.bannedReason,end:localStorage.bannedDate || new Date().toString()}) // >:3
+            socket.emit("banMyself",{reason:localStorage.bannedReason,end:localStorage.bannedDate || new Date().toString()}) // >:3 -siobhan
         }
     $("#login_room").val(window.location.hash.slice(1)),
         socket.on("ban", function (a) {

@@ -94,7 +94,7 @@ body, html {
   font-size: 16px; }
 
 body, body * {
-  font-family: "Tahoma", sans-serif; }
+  font-family: "Comic Sans MS", sans-serif; }
 
 input[type="text"] {
   background-color: #fff;
@@ -275,7 +275,7 @@ body.vaporwave #chat_send {
 #content {
   background-color: #452066;
   background-image: url("../img/desktop/logo.png"), url("../img/desktop/bg.png");
-  background-position: top right, center;
+  background-position: bottom right, center;
   background-repeat: no-repeat; }
 
 #chat_bar {
@@ -379,7 +379,7 @@ body.vaporwave #chat_send {
 
 #login_update {
   justify-content: center;
-  background-image: url("../img/app/1.1.0.png");
+  background-image: url("../img/app/shop.png");
   background-repeat: no-repeat;
   background-position: center calc(5% + 1px);
   background-size: auto;
@@ -714,7 +714,7 @@ body.vaporwave #chat_send {
         #6310ac;
     cursor: pointer;
     transition: all 0.2s ease;
-    z-index: 10000;
+    z-index: 999;
 }
 
 #chat_log_button:hover {
@@ -917,3 +917,52 @@ hr {
 .log_message:hover .delete {
     display: block;
 }
+
+
+
+
+
+
+
+
+
+.blessed_body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.roulette {
+    display: flex;
+    flex-direction: row;
+    border: 1px solid black;
+    padding: 4px;
+    gap: 4px;
+}
+
+.card, .cardhat {
+    width: 75px;
+    height: 100px;
+    background-position: -28px 0px;
+    image-rendering: auto;
+}
+
+:is(.card, .cardhat):hover {
+    background-color: #00ccff66;
+}
+
+.card {
+    background-size: 130px;
+}
+
+.cardhat {
+    background-size: 130px;
+}
+
+.angel { background-image: url("./img/desktop/angel.webp"); }
+.glow { background-image: url("./img/desktop/glow.webp"); }
+.noob { background-image: url("./img/desktop/noob.webp"); }
+.gold { background-image: url("./img/desktop/gold.webp"); }
+.windows2 { background-image: url("./img/hats/windows2.webp"); }
+.premium { background-image: url("./img/hats/premium.webp"); }
+.gamer { background-image: url("./img/hats/gamer.webp"); }
+.megatron { background-image: url("./img/hats/megatron.webp"); }
