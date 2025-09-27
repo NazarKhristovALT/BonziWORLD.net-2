@@ -4,7 +4,7 @@ const http = require('http');
 const socketio = require('socket.io');
 const cors = require('cors');
 const fs = require('fs');
-
+const imageBlacklistPath = path.join(__dirname, 'config', 'image_blacklist.txt');
 const app = express();
 const PORT = process.env.PORT || 80;
 
@@ -99,6 +99,33 @@ let altLimit = 5; // Default connection limit per IP
 
 // Text filtering system (like index.js)
 const BLACKLIST_PATH = path.join(__dirname, 'config', 'blacklist.txt');
+let imageBlacklist = [];
+
+// Load image blacklist
+function loadImageBlacklist() {
+    try {
+        // First try to load from config.json
+        if (config.image_blacklist && Array.isArray(config.image_blacklist)) {
+            imageBlacklist = config.image_blacklist;
+            console.log('Image blacklist loaded from config:', imageBlacklist.length, 'entries');
+        }
+        
+        // Also try to load from external file
+        if (fs.existsSync(imageBlacklistPath)) {
+            const fileContent = fs.readFileSync(imageBlacklistPath, 'utf8')
+                .toString()
+                .replace(/\r/g, '')
+                .split('\n')
+                .filter(url => url.trim() !== '' && !url.startsWith('#'));
+            imageBlacklist = [...imageBlacklist, ...fileContent];
+            console.log('Image blacklist loaded from file:', fileContent.length, 'entries');
+        }
+        
+        console.log('Total image blacklist entries:', imageBlacklist.length);
+    } catch (err) {
+        console.error('Error loading image blacklist:', err);
+    }
+}
 let blacklist = [];
 
 // Load blacklist
@@ -247,7 +274,13 @@ app.use(express.static(frontendDir));
 app.get('/', (req, res) => {
     res.sendFile(path.join(frontendDir, 'index.html'));
 });
-
+app.get('/reload-image-blacklist', (req, res) => {
+    if (req.query.key !== config.godmode_password) {
+        return res.status(403).send('Forbidden');
+    }
+    loadImageBlacklist();
+    res.send('Image blacklist reloaded successfully');
+});
 // Create HTTP server and attach socket.io
 const server = http.createServer(app);
 const io = socketio(server);
@@ -355,6 +388,7 @@ try {
 
 // Load blacklist on startup
 loadBlacklist();
+loadImageBlacklist(); // Added this line
 
 // Load or create bans file
 let bans = [];
@@ -398,9 +432,25 @@ function isAllowedMediaUrl(rawUrl, kind) {
         const u = new URL(rawUrl);
         const host = (u.hostname || '').toLowerCase();
         const pathname = (u.pathname || '').toLowerCase();
+        const fullUrl = u.href.toLowerCase();
+        
+        // Check against image blacklist first
+        if (kind === 'image') {
+            for (const blockedUrl of imageBlacklist) {
+                const blocked = blockedUrl.toLowerCase();
+                // Check for full URL match or partial match
+                if (fullUrl.includes(blocked) || 
+                    (blocked.includes(host) && blocked.includes(pathname))) {
+                    console.log('Image blocked by blacklist:', rawUrl);
+                    return false;
+                }
+            }
+        }
+        
         const allowedDomains = (kind === 'image') ? (config.image_whitelist || []) : (config.video_whitelist || []);
         const domainAllowed = allowedDomains.some(d => host === d || host.endsWith('.' + d));
         if (!domainAllowed) return false;
+        
         const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
         const videoExts = ['.mp4', '.webm', '.ogg'];
         const allowedExts = (kind === 'image') ? imageExts : videoExts;
@@ -409,18 +459,6 @@ function isAllowedMediaUrl(rawUrl, kind) {
         return false;
     }
 }
-
-// Helper function to check permissions
-function hasPermission(userPublic, requiredLevel) {
-    if (requiredLevel === 'admin') {
-        return userPublic.admin;
-    }
-    if (requiredLevel === 'moderator') {
-        return userPublic.admin || userPublic.moderator;
-    }
-    return true; // public commands
-}
-
 // Enhanced connection handler with IP protection
 io.on('connection', (socket) => {
     // Get and validate IP (like index.js)
