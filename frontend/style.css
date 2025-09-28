@@ -94,7 +94,7 @@ body, html {
   font-size: 16px; }
 
 body, body * {
-  font-family: "Comic Sans MS", sans-serif; }
+  font-family: "Tahoma", sans-serif; }
 
 input[type="text"] {
   background-color: #fff;
@@ -142,7 +142,7 @@ input[type="text"] {
     background-repeat: no-repeat !important;
     background-position: center !important;
     pointer-events: none !important;
-    z-index: 2 !important;
+    z-index: 1 !important;
     display: none;
 }
 .bonzi > canvas, .bonzi_placeholder {
@@ -214,6 +214,7 @@ input[type="text"] {
     left: 110px; }
 
 .bonzi_name {
+  z-index: 2 !important;
   border-style: solid;
   border-width: 4px 12px 4px 0;
   border-radius: 9px;
@@ -379,7 +380,7 @@ body.vaporwave #chat_send {
 
 #login_update {
   justify-content: center;
-  background-image: url("../img/app/shop.png");
+  background-image: url("../img/app/bless.png");
   background-repeat: no-repeat;
   background-position: center calc(5% + 1px);
   background-size: auto;

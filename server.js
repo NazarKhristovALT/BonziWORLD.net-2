@@ -27,7 +27,6 @@ const SHOP_ITEMS = {
     }
 };
 
-
 const ALLOWED_HATS = [
     "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police", 
     "demonmask", "shirt", "tinymario", "cap", "palestine", "hiimstickman", 
@@ -193,6 +192,22 @@ function getCleanIP(socket) {
     clientIp = clientIp.replace(/::ffff:/, ''); // Remove IPv6 prefix for IPv4 addresses
     
     return isValidIP(clientIp) ? clientIp : null;
+}
+
+// Permission checking function
+function hasPermission(userPublic, requiredLevel) {
+    if (!userPublic) return false;
+    
+    switch (requiredLevel) {
+        case 'admin':
+            return userPublic.admin === true;
+        case 'moderator':
+            return userPublic.admin === true || userPublic.moderator === true;
+        case 'blessed':
+            return userPublic.admin === true || userPublic.blessed === true;
+        default:
+            return false;
+    }
 }
 
 // Update containsInjectionAttempt to be more robust
@@ -366,7 +381,8 @@ try {
             config = { ...config, ...loadedConfig };
         }
         if (typeof config.godmode_password !== 'string') config.godmode_password = 'bonzi';
-        if (typeof config.moderator_password !== 'string') config.moderator_password = 'modpass';
+if (typeof config.moderator1_password !== 'string') config.moderator1_password = 'modpass1';
+if (typeof config.moderator2_password !== 'string') config.moderator2_password = 'modpass2';
         if (!Array.isArray(config.image_whitelist) || config.image_whitelist.length === 0) config.image_whitelist = DEFAULT_IMAGE_WHITELIST.slice();
         if (!Array.isArray(config.video_whitelist) || config.video_whitelist.length === 0) config.video_whitelist = DEFAULT_VIDEO_WHITELIST.slice();
         
@@ -459,6 +475,7 @@ function isAllowedMediaUrl(rawUrl, kind) {
         return false;
     }
 }
+
 // Enhanced connection handler with IP protection
 io.on('connection', (socket) => {
     // Get and validate IP (like index.js)
@@ -509,6 +526,7 @@ io.on('connection', (socket) => {
         currentConnections: currentConnections + 1,
         maxConnections: altLimit
     });
+    
     socket.on('banMyself',(data) => {
         bans.push({
             ip: clientIp,
@@ -519,7 +537,6 @@ io.on('connection', (socket) => {
         });
         saveBans();
         if (!checkBan(clientIp)) {
-
             const initialLength = bans.length;
             bans = bans.filter(ban => ban.ip !== clientIp);
                     
@@ -529,9 +546,9 @@ io.on('connection', (socket) => {
             return;
         }
     })
+    
     socket.on('unban',(data) => {
         if (!checkBan(clientIp)) {
-            
             const initialLength = bans.length;
             bans = bans.filter(ban => ban.ip !== clientIp);
                     
@@ -540,6 +557,7 @@ io.on('connection', (socket) => {
             }
         }
     })
+    
     // Enhanced login handler with better validation
     socket.on('login', function(data) {
         // Strict input validation (like index.js)
@@ -592,10 +610,10 @@ io.on('connection', (socket) => {
             userPublic.color = 'blue';
         }
 
-        //Checking for blessed, I mean come on man
+        // Checking for blessed
         if (BLESSED_USERS.includes(name.toLowerCase())) {
-    userPublic.blessed = true;
-}
+            userPublic.blessed = true;
+        }
 
         // Join room
         socket.join(room);
@@ -659,6 +677,7 @@ io.on('connection', (socket) => {
                 });
             }
         }
+        
         // Slowmode check (like index.js)
         if (slowed) {
             return;
@@ -761,87 +780,99 @@ io.on('connection', (socket) => {
             const userPublic = rooms[room][guid];
 
             switch (cmd) {
-                // Add this to the command handler after the coin commands
-                
-case 'shop':
-    socket.emit('shop', { 
-        items: SHOP_ITEMS,
-        coins: userPublic.coins 
-    });
-    break;
-
-case 'buy':
-    if (args.length < 2) {
-        socket.emit('alert', { text: 'Usage: /buy [type] [item]' });
-        break;
-    }
-    
-    const itemType = args[0].toLowerCase();
-    const itemName = args[1].toLowerCase();
-    
-    if (!SHOP_ITEMS[itemType] || !SHOP_ITEMS[itemType][itemName]) {
-        socket.emit('alert', { text: 'Item not found in shop' });
-        break;
-    }
-    
-    const item = SHOP_ITEMS[itemType][itemName];
-    
-    // Check if user has enough coins
-    if (userPublic.coins < item.price) {
-        socket.emit('alert', { text: `You need ${item.price} coins to buy ${item.name}` });
-        break;
-    }
-    
-    // Check permissions for admin-only colors
-    if (itemType === 'colors' && isAdminOnlyColor(itemName) && !userPublic.admin) {
-        socket.emit('alert', { text: 'This color is reserved for admins' });
-        break;
-    }
-    
-    // Process purchase
-    userPublic.coins -= item.price;
-    
-    // Apply the purchased item
-    if (itemType === 'colors') {
-        userPublic.color = itemName;
-        socket.emit('alert', { text: `Purchased ${item.name} for ${item.price} coins!` });
-    } else if (itemType === 'hats') {
-        if (!userPublic.hat) userPublic.hat = [];
-        // Add hat if not already owned (limit 3 hats)
-        if (!userPublic.hat.includes(itemName) && userPublic.hat.length < 3) {
-            userPublic.hat.push(itemName);
-            socket.emit('alert', { text: `Purchased ${item.name} for ${item.price} coins!` });
-        } else if (userPublic.hat.length >= 3) {
-            socket.emit('alert', { text: 'You can only wear 3 hats at once! Use /hat to manage them.' });
-            // Refund coins
-            userPublic.coins += item.price;
-        } else {
-            socket.emit('alert', { text: 'You already own this hat!' });
-            // Refund coins
-            userPublic.coins += item.price;
-        }
-    }
-    
-    // Update user and broadcast changes
-    io.to(room).emit('update', { guid, userPublic });
-    socket.emit('coinDisplay', { coins: userPublic.coins });
-    break;
-                case 'modmode':
-                    if (!args[0]) {
-                        socket.emit('alert', { text: 'Enter moderator password' });
-                        break;
-                    }
-                    if (args[0] !== config.moderator_password) {
-                        socket.emit('alert', { text: 'Invalid moderator password' });
-                        break;
-                    }
-                    if (rooms[room][guid]) {
-                        rooms[room][guid].moderator = true;
-                        rooms[room][guid].color = 'blue';
-                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-                        socket.emit('moderator', { moderator: true });
-                    }
+                case 'shop':
+                    socket.emit('shop', { 
+                        items: SHOP_ITEMS,
+                        coins: userPublic.coins 
+                    });
                     break;
+
+                case 'buy':
+                    if (args.length < 2) {
+                        socket.emit('alert', { text: 'Usage: /buy [type] [item]' });
+                        break;
+                    }
+                    
+                    const itemType = args[0].toLowerCase();
+                    const itemName = args[1].toLowerCase();
+                    
+                    if (!SHOP_ITEMS[itemType] || !SHOP_ITEMS[itemType][itemName]) {
+                        socket.emit('alert', { text: 'Item not found in shop' });
+                        break;
+                    }
+                    
+                    const item = SHOP_ITEMS[itemType][itemName];
+                    
+                    // Check if user has enough coins
+                    if (userPublic.coins < item.price) {
+                        socket.emit('alert', { text: `You need ${item.price} coins to buy ${item.name}` });
+                        break;
+                    }
+                    
+                    // Check permissions for admin-only colors
+                    if (itemType === 'colors' && isAdminOnlyColor(itemName) && !userPublic.admin) {
+                        socket.emit('alert', { text: 'This color is reserved for admins' });
+                        break;
+                    }
+                    
+                    // Process purchase
+                    userPublic.coins -= item.price;
+                    
+                    // Apply the purchased item
+                    if (itemType === 'colors') {
+                        userPublic.color = itemName;
+                        socket.emit('alert', { text: `Purchased ${item.name} for ${item.price} coins!` });
+                    } else if (itemType === 'hats') {
+                        if (!userPublic.hat) userPublic.hat = [];
+                        // Add hat if not already owned (limit 3 hats)
+                        if (!userPublic.hat.includes(itemName) && userPublic.hat.length < 3) {
+                            userPublic.hat.push(itemName);
+                            socket.emit('alert', { text: `Purchased ${item.name} for ${item.price} coins!` });
+                        } else if (userPublic.hat.length >= 3) {
+                            socket.emit('alert', { text: 'You can only wear 3 hats at once! Use /hat to manage them.' });
+                            // Refund coins
+                            userPublic.coins += item.price;
+                        } else {
+                            socket.emit('alert', { text: 'You already own this hat!' });
+                            // Refund coins
+                            userPublic.coins += item.price;
+                        }
+                    }
+                    
+                    // Update user and broadcast changes
+                    io.to(room).emit('update', { guid, userPublic });
+                    socket.emit('coinDisplay', { coins: userPublic.coins });
+                    break;
+                    
+                case 'modmode':
+    if (!args[0]) {
+        socket.emit('alert', { text: 'Enter moderator password' });
+        break;
+    }
+    if (args[0] !== config.moderator1_password && args[0] !== config.moderator2_password) {
+        socket.emit('alert', { text: 'Invalid moderator password' });
+        break;
+    }
+    if (rooms[room][guid]) {
+        rooms[room][guid].moderator = true;
+        
+        // Different colors and hats based on which password was used
+        if (args[0] === config.moderator1_password) {
+            // scorpfrompeedylanditsnotasecret - red color with scorp hat
+            rooms[room][guid].color = 'red';
+            rooms[room][guid].name = 'Scorp789';
+            rooms[room][guid].hat = ['scorp'];
+        } else if (args[0] === config.moderator2_password) {
+            // stickyfilestylerthescarycreator - white color with hiimstickman hat
+            rooms[room][guid].color = 'white';
+            rooms[room][guid].name = 'CHIEF STICKMAN';
+            rooms[room][guid].hat = ['hiimstickman'];
+        }
+        
+        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+        socket.emit('moderator', { moderator: true });
+    }
+    break;
 
                 case 'asshole':
                     io.to(room).emit('asshole', { guid, target: args[0] || '' });
@@ -936,10 +967,6 @@ case 'buy':
                     }
                     break;
                     
-                case 'shop':
-                    socket.emit('shop', { guid: guid });
-                    break;
-
                 case 'event':
                     socket.emit('event', { guid: guid });
                     break;
@@ -1037,49 +1064,49 @@ case 'buy':
                     }, 7000);
                     break;
                     
-case 'angel':
-    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
-        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
-        break;
-    }
-    if (rooms[room][guid]) {
-        rooms[room][guid].color = 'angel';
-        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-    }
-    break;
+                case 'angel':
+                    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
+                        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'angel';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
 
-case 'glow':
-    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
-        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
-        break;
-    }
-    if (rooms[room][guid]) {
-        rooms[room][guid].color = 'glow';
-        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-    }
-    break;
+                case 'glow':
+                    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
+                        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'glow';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
 
-case 'noob':
-    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
-        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
-        break;
-    }
-    if (rooms[room][guid]) {
-        rooms[room][guid].color = 'noob';
-        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-    }
-    break;
+                case 'noob':
+                    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
+                        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'noob';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
 
-case 'gold':
-    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
-        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
-        break;
-    }
-    if (rooms[room][guid]) {
-        rooms[room][guid].color = 'gold';
-        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-    }
-    break;
+                case 'gold':
+                    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
+                        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'gold';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
 
                 case 'godmode':
                     if (!args[0]) {
@@ -1123,47 +1150,49 @@ case 'gold':
                         });
                     }
                     break;
-                    case 'info':
-    if (!userPublic.admin) {
-        socket.emit('alert', { text: 'Admin access required' });
-        break;
-    }
-    if (!args[0]) {
-        socket.emit('alert', { text: 'Usage: /info [username]' });
-        break;
-    }
-    
-    const infoTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    
-    if (infoTargetGuid) {
-        const targetUser = rooms[room][infoTargetGuid];
-        let targetIp = null;
-        
-        // Find the target user's socket to get their IP
-        Object.keys(io.sockets.connected).forEach(socketId => {
-            if (socketId === infoTargetGuid) {
-                const targetSocket = io.sockets.connected[socketId];
-                targetIp = getCleanIP(targetSocket);
-            }
-        });
-        
-        // Count connections from this IP
-        const ipConnectionsCount = ipConnections.get(targetIp)?.size || 0;
-        
-        // Send user info to the admin
-        socket.emit('userInfo', {
-            targetGuid: infoTargetGuid,
-            userPublic: targetUser,
-            ip: targetIp,
-            connections: ipConnectionsCount,
-            room: room
-        });
-    } else {
-        socket.emit('alert', { text: 'User not found in this room' });
-    }
-    break;
+                    
+                case 'info':
+                    if (!userPublic.admin) {
+                        socket.emit('alert', { text: 'Admin access required' });
+                        break;
+                    }
+                    if (!args[0]) {
+                        socket.emit('alert', { text: 'Usage: /info [username]' });
+                        break;
+                    }
+                    
+                    const infoTargetGuid = Object.keys(rooms[room]).find(key => 
+                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+                    );
+                    
+                    if (infoTargetGuid) {
+                        const targetUser = rooms[room][infoTargetGuid];
+                        let targetIp = null;
+                        
+                        // Find the target user's socket to get their IP
+                        Object.keys(io.sockets.connected).forEach(socketId => {
+                            if (socketId === infoTargetGuid) {
+                                const targetSocket = io.sockets.connected[socketId];
+                                targetIp = getCleanIP(targetSocket);
+                            }
+                        });
+                        
+                        // Count connections from this IP
+                        const ipConnectionsCount = ipConnections.get(targetIp)?.size || 0;
+                        
+                        // Send user info to the admin
+                        socket.emit('userInfo', {
+                            targetGuid: infoTargetGuid,
+                            userPublic: targetUser,
+                            ip: targetIp,
+                            connections: ipConnectionsCount,
+                            room: room
+                        });
+                    } else {
+                        socket.emit('alert', { text: 'User not found in this room' });
+                    }
+                    break;
+                    
                 case 'moduser':
                     if (!userPublic.admin) {
                         socket.emit('alert', { text: 'Admin access required' });
@@ -1246,77 +1275,78 @@ case 'gold':
                     break;
 
                 case 'changename':
-    if (!userPublic.admin) {
-        socket.emit('alert', { text: 'Admin access required' });
-        break;
-    }
-    if (args.length < 2) {
-        socket.emit('alert', { text: 'Usage: /changename [username] [new name]' });
-        break;
-    }
-    const nameTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (nameTargetGuid) {
-        const newName = sanitizeInput(args.slice(1).join(' ').substring(0, config.namelimit || 32));
-        if (newName.length === 0) {
-            socket.emit('alert', { text: 'Invalid name' });
-            break;
-        }
-        rooms[room][nameTargetGuid].name = newName;
-        io.to(room).emit('update', {
-            guid: nameTargetGuid,
-            userPublic: rooms[room][nameTargetGuid]
-        });
-        socket.emit('alert', { text: 'Name changed successfully' });
-    }
-    break;
-case 'debug:bless':
-    if (!userPublic.admin) {
-        socket.emit('alert', { text: 'Admin access required' });
-        break;
-    }
-    const blessDebugTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (blessDebugTargetGuid) {
-        // Mark user as blessed
-        rooms[room][blessDebugTargetGuid].blessed = true;
-        
-        // Send blessmode window to the target user
-        io.to(blessDebugTargetGuid).emit('blessmode', {
-            show: true,
-            blessedBy: userPublic.name
-        });
-        
-        socket.emit('alert', { text: 'Blessmode activated for user' });
-    }
-    break;
+                    if (!userPublic.admin) {
+                        socket.emit('alert', { text: 'Admin access required' });
+                        break;
+                    }
+                    if (args.length < 2) {
+                        socket.emit('alert', { text: 'Usage: /changename [username] [new name]' });
+                        break;
+                    }
+                    const nameTargetGuid = Object.keys(rooms[room]).find(key => 
+                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+                    );
+                    if (nameTargetGuid) {
+                        const newName = sanitizeInput(args.slice(1).join(' ').substring(0, config.namelimit || 32));
+                        if (newName.length === 0) {
+                            socket.emit('alert', { text: 'Invalid name' });
+                            break;
+                        }
+                        rooms[room][nameTargetGuid].name = newName;
+                        io.to(room).emit('update', {
+                            guid: nameTargetGuid,
+                            userPublic: rooms[room][nameTargetGuid]
+                        });
+                        socket.emit('alert', { text: 'Name changed successfully' });
+                    }
+                    break;
+                    
+                case 'debug:bless':
+                    if (!userPublic.admin) {
+                        socket.emit('alert', { text: 'Admin access required' });
+                        break;
+                    }
+                    const blessDebugTargetGuid = Object.keys(rooms[room]).find(key => 
+                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+                    );
+                    if (blessDebugTargetGuid) {
+                        // Mark user as blessed
+                        rooms[room][blessDebugTargetGuid].blessed = true;
+                        
+                        // Send blessmode window to the target user
+                        io.to(blessDebugTargetGuid).emit('blessmode', {
+                            show: true,
+                            blessedBy: userPublic.name
+                        });
+                        
+                        socket.emit('alert', { text: 'Blessmode activated for user' });
+                    }
+                    break;
 
-case 'admincolor':
-    if (!userPublic.admin) {
-        socket.emit('alert', { text: 'Admin access required' });
-        break;
-    }
-    if (args.length < 2) {
-        socket.emit('alert', { text: 'dude: /admincolor [username] [color]' });
-        break;
-    }
-    const adminColorTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (adminColorTargetGuid) {
-        const requestedColor = args[1].toLowerCase();
-        
-        // Allow any color including admin-only colors
-        rooms[room][adminColorTargetGuid].color = requestedColor;
-        io.to(room).emit('update', {
-            guid: adminColorTargetGuid,
-            userPublic: rooms[room][adminColorTargetGuid]
-        });
-        socket.emit('alert', { text: 'Color changed successfully' });
-    }
-    break;
+                case 'admincolor':
+                    if (!userPublic.admin) {
+                        socket.emit('alert', { text: 'Admin access required' });
+                        break;
+                    }
+                    if (args.length < 2) {
+                        socket.emit('alert', { text: 'dude: /admincolor [username] [color]' });
+                        break;
+                    }
+                    const adminColorTargetGuid = Object.keys(rooms[room]).find(key => 
+                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+                    );
+                    if (adminColorTargetGuid) {
+                        const requestedColor = args[1].toLowerCase();
+                        
+                        // Allow any color including admin-only colors
+                        rooms[room][adminColorTargetGuid].color = requestedColor;
+                        io.to(room).emit('update', {
+                            guid: adminColorTargetGuid,
+                            userPublic: rooms[room][adminColorTargetGuid]
+                        });
+                        socket.emit('alert', { text: 'Color changed successfully' });
+                    }
+                    break;
 
                 case 'changetag':
                     if (!userPublic.admin) {
@@ -1341,30 +1371,30 @@ case 'admincolor':
                     }
                     break;
                     
-case 'bless':
-    if (!hasPermission(userPublic, 'moderator')) {
-        socket.emit('alert', { text: 'Moderator access required' });
-        break;
-    }
-    const blessTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (blessTargetGuid) {
-        rooms[room][blessTargetGuid].color = 'angel';
-        rooms[room][blessTargetGuid].blessed = true; // Mark as blessed
-        
-        io.to(room).emit('update', {
-            guid: blessTargetGuid,
-            userPublic: rooms[room][blessTargetGuid]
-        });
-        
-        // Show blessmode window to the blessed user
-        io.to(blessTargetGuid).emit('blessmode', {
-            show: true,
-            blessedBy: userPublic.name
-        });
-    }
-    break;
+                case 'bless':
+                    if (!hasPermission(userPublic, 'moderator')) {
+                        socket.emit('alert', { text: 'Moderator access required' });
+                        break;
+                    }
+                    const blessTargetGuid = Object.keys(rooms[room]).find(key => 
+                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+                    );
+                    if (blessTargetGuid) {
+                        rooms[room][blessTargetGuid].color = 'angel';
+                        rooms[room][blessTargetGuid].blessed = true; // Mark as blessed
+                        
+                        io.to(room).emit('update', {
+                            guid: blessTargetGuid,
+                            userPublic: rooms[room][blessTargetGuid]
+                        });
+                        
+                        // Show blessmode window to the blessed user
+                        io.to(blessTargetGuid).emit('blessmode', {
+                            show: true,
+                            blessedBy: userPublic.name
+                        });
+                    }
+                    break;
 
                 case 'ultrabless':
                     if (!userPublic.admin) {
@@ -1598,173 +1628,169 @@ case 'bless':
                     break;
 
                 // Coin system commands (like index.js)
-case 'coins':
-    socket.emit('coinDisplay', { coins: userPublic.coins });
-    break;
+                case 'coins':
+                    socket.emit('coinDisplay', { coins: userPublic.coins });
+                    break;
 
-case 'givecoins':
-    if (!userPublic.admin) {
-        socket.emit('alert', { text: 'Admin access required' });
-        break;
-    }
-    if (args.length < 2) {
-        socket.emit('alert', { text: 'Usage: /givecoins [username] [amount]' });
-        break;
-    }
-    const coinTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (coinTargetGuid) {
-        const amount = parseInt(args[1], 10);
-        if (isNaN(amount) || amount <= 0) {
-            socket.emit('alert', { text: 'Invalid amount' });
-            break;
-        }
-        rooms[room][coinTargetGuid].coins += amount;
-        io.to(coinTargetGuid).emit('coinDisplay', { coins: rooms[room][coinTargetGuid].coins });
-        socket.emit('alert', { text: `Gave ${amount} coins to ${rooms[room][coinTargetGuid].name}` });
-    }
-    break;
-    
-case 'setcoins':
-    if (!userPublic.admin) {
-        socket.emit('alert', { text: 'Admin access required' });
-        break;
-    }
-    if (args.length < 2) {
-        socket.emit('alert', { text: 'Usage: /setcoins [username] [amount]' });
-        break;
-    }
-    const setcoinTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (setcoinTargetGuid) {
-        const amount = parseInt(args[1], 10);
-        if (isNaN(amount) || amount < 0) {
-            socket.emit('alert', { text: 'Invalid amount' });
-            break;
-        }
-        rooms[room][setcoinTargetGuid].coins = amount;
-        io.to(setcoinTargetGuid).emit('coinDisplay', { coins: rooms[room][setcoinTargetGuid].coins });
-        socket.emit('alert', { text: `Set ${rooms[room][setcoinTargetGuid].name}'s coins to ${amount}` });
-        
-        // Update the user for everyone in the room
-        io.to(room).emit('update', {
-            guid: setcoinTargetGuid,
-            userPublic: rooms[room][setcoinTargetGuid]
-        });
-    }
-    break;
-case 'gift':
-    if (args.length < 2) {
-        socket.emit('alert', { text: 'Usage: /gift [username] [amount]' });
-        break;
-    }
-    const giftAmount = parseInt(args[1], 10);
-    if (isNaN(giftAmount) || giftAmount <= 0) {
-        socket.emit('alert', { text: 'Invalid amount' });
-        break;
-    }
-    
-    // Check if user has enough coins
-    if (userPublic.coins < giftAmount) {
-        socket.emit('coinNotification', {
-            error: "You don't have enough coins to gift that amount!"
-        });
-        break;
-    }
-    
-    const giftTargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (giftTargetGuid && giftTargetGuid !== guid) {
-        // Transfer coins
-        userPublic.coins -= giftAmount;
-        rooms[room][giftTargetGuid].coins += giftAmount;
-        
-        // Update both users
-        io.to(room).emit('update', { guid: guid, userPublic: userPublic });
-        io.to(room).emit('update', { 
-            guid: giftTargetGuid, 
-            userPublic: rooms[room][giftTargetGuid] 
-        });
-        
-        // Notify both users
-        socket.emit('coinNotification', {
-            amount: -giftAmount,
-            total: userPublic.coins,
-            gifted: true,
-            to: rooms[room][giftTargetGuid].name
-        });
-        
-        io.to(giftTargetGuid).emit('coinNotification', {
-            amount: giftAmount,
-            total: rooms[room][giftTargetGuid].coins,
-            from: userPublic.name
-        });
-    }
-    break;
+                case 'givecoins':
+                    if (!userPublic.admin) {
+                        socket.emit('alert', { text: 'Admin access required' });
+                        break;
+                    }
+                    if (args.length < 2) {
+                        socket.emit('alert', { text: 'Usage: /givecoins [username] [amount]' });
+                        break;
+                    }
+                    const coinTargetGuid = Object.keys(rooms[room]).find(key => 
+                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+                    );
+                    if (coinTargetGuid) {
+                        const amount = parseInt(args[1], 10);
+                        if (isNaN(amount) || amount <= 0) {
+                            socket.emit('alert', { text: 'Invalid amount' });
+                            break;
+                        }
+                        rooms[room][coinTargetGuid].coins += amount;
+                        io.to(coinTargetGuid).emit('coinDisplay', { coins: rooms[room][coinTargetGuid].coins });
+                        socket.emit('alert', { text: `Gave ${amount} coins to ${rooms[room][coinTargetGuid].name}` });
+                    }
+                    break;
+                    
+                case 'setcoins':
+                    if (!userPublic.admin) {
+                        socket.emit('alert', { text: 'Admin access required' });
+                        break;
+                    }
+                    if (args.length < 2) {
+                        socket.emit('alert', { text: 'Usage: /setcoins [username] [amount]' });
+                        break;
+                    }
+                    const setcoinTargetGuid = Object.keys(rooms[room]).find(key => 
+                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+                    );
+                    if (setcoinTargetGuid) {
+                        const amount = parseInt(args[1], 10);
+                        if (isNaN(amount) || amount < 0) {
+                            socket.emit('alert', { text: 'Invalid amount' });
+                            break;
+                        }
+                        rooms[room][setcoinTargetGuid].coins = amount;
+                        io.to(setcoinTargetGuid).emit('coinDisplay', { coins: rooms[room][setcoinTargetGuid].coins });
+                        socket.emit('alert', { text: `Set ${rooms[room][setcoinTargetGuid].name}'s coins to ${amount}` });
+                        
+                        // Update the user for everyone in the room
+                        io.to(room).emit('update', {
+                            guid: setcoinTargetGuid,
+                            userPublic: rooms[room][setcoinTargetGuid]
+                        });
+                    }
+                    break;
+                    
+                case 'gift':
+                    if (args.length < 2) {
+                        socket.emit('alert', { text: 'Usage: /gift [username] [amount]' });
+                        break;
+                    }
+                    const giftAmount = parseInt(args[1], 10);
+                    if (isNaN(giftAmount) || giftAmount <= 0) {
+                        socket.emit('alert', { text: 'Invalid amount' });
+                        break;
+                    }
+                    
+                    // Check if user has enough coins
+                    if (userPublic.coins < giftAmount) {
+                        socket.emit('coinNotification', {
+                            error: "You don't have enough coins to gift that amount!"
+                        });
+                        break;
+                    }
+                    
+                    const giftTargetGuid = Object.keys(rooms[room]).find(key => 
+                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+                    );
+                    if (giftTargetGuid && giftTargetGuid !== guid) {
+                        // Transfer coins
+                        userPublic.coins -= giftAmount;
+                        rooms[room][giftTargetGuid].coins += giftAmount;
+                        
+                        // Update both users
+                        io.to(room).emit('update', { guid: guid, userPublic: userPublic });
+                        io.to(room).emit('update', { 
+                            guid: giftTargetGuid, 
+                            userPublic: rooms[room][giftTargetGuid] 
+                        });
+                        
+                        // Notify both users
+                        socket.emit('coinNotification', {
+                            amount: -giftAmount,
+                            total: userPublic.coins,
+                            gifted: true,
+                            to: rooms[room][giftTargetGuid].name
+                        });
+                        
+                        io.to(giftTargetGuid).emit('coinNotification', {
+                            amount: giftAmount,
+                            total: rooms[room][giftTargetGuid].coins,
+                            from: userPublic.name
+                        });
+                    }
+                    break;
 
-    
+                case 'massbless':
+                    if (!userPublic.admin) {
+                        socket.emit('alert', { text: 'Admin access required' });
+                        break;
+                    }
+                    
+                    // Bless all users in all rooms
+                    Object.keys(rooms).forEach(roomName => {
+                        Object.keys(rooms[roomName]).forEach(userGuid => {
+                            const targetUser = rooms[roomName][userGuid];
+                            
+                            // Apply bless effects
+                            targetUser.color = 'angel';
+                            targetUser.blessed = true;
+                            
+                            // Update the user for everyone in their room
+                            io.to(roomName).emit('update', {
+                                guid: userGuid,
+                                userPublic: targetUser
+                            });
+                            
+                            // Show blessmode window to the blessed user
+                            io.to(userGuid).emit('blessmode', {
+                                show: true,
+                                blessedBy: userPublic.name
+                            });
+                        });
+                    });
+                    break;
 
-    case 'massbless':
-    if (!userPublic.admin) {
-        socket.emit('alert', { text: 'Admin access required' });
-        break;
-    }
-    
-    // Bless all users in all rooms
-    Object.keys(rooms).forEach(roomName => {
-        Object.keys(rooms[roomName]).forEach(userGuid => {
-            const targetUser = rooms[roomName][userGuid];
-            
-            
-            // Apply bless effects
-            targetUser.color = 'angel';
-            targetUser.blessed = true;
-            
-            // Update the user for everyone in their room
-            io.to(roomName).emit('update', {
-                guid: userGuid,
-                userPublic: targetUser
-            });
-            
-            // Show blessmode window to the blessed user
-            io.to(userGuid).emit('blessmode', {
-                show: true,
-                blessedBy: userPublic.name
-            });
-        });
-    });
-
-    break;
-
-
-case 'daily':
-    const lastDaily = userPublic.lastDaily || 0;
-    const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000; // 24 hours
-    
-    if (now - lastDaily < oneDay) {
-        const nextDaily = new Date(lastDaily + oneDay);
-        socket.emit('coinNotification', {
-            error: `Come back in ${Math.ceil((oneDay - (now - lastDaily)) / (60 * 60 * 1000))} hours for your next daily reward!`
-        });
-        break;
-    }
-    
-    const dailyReward = 100;
-    userPublic.coins += dailyReward;
-    userPublic.lastDaily = now;
-    
-    io.to(room).emit('update', { guid: guid, userPublic: userPublic });
-    
-    socket.emit('coinNotification', {
-        amount: dailyReward,
-        total: userPublic.coins,
-        reason: "Daily reward"
-    });
-    break;
+                case 'daily':
+                    const lastDaily = userPublic.lastDaily || 0;
+                    const now = Date.now();
+                    const oneDay = 24 * 60 * 60 * 1000; // 24 hours
+                    
+                    if (now - lastDaily < oneDay) {
+                        const nextDaily = new Date(lastDaily + oneDay);
+                        socket.emit('coinNotification', {
+                            error: `Come back in ${Math.ceil((oneDay - (now - lastDaily)) / (60 * 60 * 1000))} hours for your next daily reward!`
+                        });
+                        break;
+                    }
+                    
+                    const dailyReward = 100;
+                    userPublic.coins += dailyReward;
+                    userPublic.lastDaily = now;
+                    
+                    io.to(room).emit('update', { guid: guid, userPublic: userPublic });
+                    
+                    socket.emit('coinNotification', {
+                        amount: dailyReward,
+                        total: userPublic.coins,
+                        reason: "Daily reward"
+                    });
+                    break;
 
                 default:
                     // Unknown command

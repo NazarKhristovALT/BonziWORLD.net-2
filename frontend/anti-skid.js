@@ -9,7 +9,7 @@
     }
   };
 
-  // Method 2: The `debugger` Check
+  // Method 2: The `debugger` Check3
   const checkDebugger = () => {
     try {
       const check = new Function('debugger', 'return false');
