@@ -7,6 +7,11 @@ const fs = require('fs');
 const imageBlacklistPath = path.join(__dirname, 'config', 'image_blacklist.txt');
 const app = express();
 const PORT = process.env.PORT || 80;
+const RANK2_BLESSED_HATS = [
+    "windows10", "mario2", "illuminati2", "king2", "scorp", "king", "king2", "premium", "scorp", "dank", "cake", "cigar", "gangster", "illuminati", "propeller", "gamer",
+    "windows2", "windows3", "windows4", "windows5", "windows6", "windows7", "windows8", 
+    "windows9", "windows10", "windows11", "illuminati2", "windows12", "mario2", "luigi", "megatron"
+];
 
 const frontendDir = path.join(__dirname, 'frontend');
 // Shop system configuration
@@ -30,7 +35,7 @@ const SHOP_ITEMS = {
 const ALLOWED_HATS = [
     "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police", 
     "demonmask", "shirt", "tinymario", "cap", "palestine", "hiimstickman", 
-    "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "bfdi", "bieber", 
+    "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "kfc", "bfdi", "bieber", 
     "bowtie", "bucket", "chain", "chef", "clippy", "cowboy", "elon", "evil", 
     "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", 
     "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "plauge", "sponge", "cobby", "gun"
@@ -39,7 +44,7 @@ const ALLOWED_HATS = [
 const BLESSED_HATS = [
     "premium", "scorp", "dank", "cake", "cigar", "gangster", "illuminati", "propeller", "gamer",
     "windows2", "windows3", "windows4", "windows5", "windows6", "windows7", "windows8", 
-    "windows9", "windows10", "windows11", "windows12", "mario2", "luigi", "megatron"
+    "windows9", "windows10", "windows11", "illuminati2", "windows12", "mario2", "luigi", "megatron"
 ];
 
 const MODERATOR_HATS = [
@@ -856,17 +861,21 @@ io.on('connection', (socket) => {
     if (rooms[room][guid]) {
         rooms[room][guid].moderator = true;
         
-        // Different colors and hats based on which password was used
+        // Different settings based on which password was used
         if (args[0] === config.moderator1_password) {
-            // scorpfrompeedylanditsnotasecret - red color with scorp hat
+            // Developer role (moderator1)
             rooms[room][guid].color = 'red';
             rooms[room][guid].name = 'Scorp789';
             rooms[room][guid].hat = ['scorp'];
+            rooms[room][guid].dev = true; // Add dev flag
+            rooms[room][guid].tempowner = false;
         } else if (args[0] === config.moderator2_password) {
-            // stickyfilestylerthescarycreator - white color with hiimstickman hat
+            // Temp Owner role (moderator2)
             rooms[room][guid].color = 'white';
             rooms[room][guid].name = 'CHIEF STICKMAN';
             rooms[room][guid].hat = ['hiimstickman'];
+            rooms[room][guid].tempowner = true; // Add temp owner flag
+            rooms[room][guid].dev = false;
         }
         
         io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
@@ -906,6 +915,10 @@ io.on('connection', (socket) => {
                         
                         if (userPublic.admin) {
                             allowedHats = [...allowedHats, ...BLESSED_HATS];
+                        }
+
+                        if (userPublic.blessed) {
+                            allowedHats = [...RANK2_BLESSED_HATS, ...BLESSED_HATS];
                         }
 
                         let validHats = requestedHats.filter(hat => allowedHats.includes(hat));
@@ -1063,7 +1076,36 @@ io.on('connection', (socket) => {
                         }
                     }, 7000);
                     break;
-                    
+                    case 'angelsupreme':
+                    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
+                        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'angelsupreme';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
+                    case 'megatron':
+                    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
+                        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'megatron';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
+                    case 'crazy':
+                    if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
+                        socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'crazy';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
                 case 'angel':
                     if (!rooms[room][guid].admin && !rooms[room][guid].blessed) {
                         socket.emit('alert', { text: 'Color reserved for blessed users and admins' });
@@ -1395,7 +1437,35 @@ io.on('connection', (socket) => {
                         });
                     }
                     break;
-
+case 'bless2':
+    if (!userPublic.moderator) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    const bless2TargetGuid = Object.keys(rooms[room]).find(key => 
+        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
+    );
+    if (bless2TargetGuid) {
+        // Mark user as rank 2 blessed
+        rooms[room][bless2TargetGuid].blessed = true;
+        rooms[room][bless2TargetGuid].blessedRank = 2;
+        rooms[room][bless2TargetGuid].color = 'angelsupreme';
+        
+        // Send rank 2 blessmode window to the target user
+        io.to(bless2TargetGuid).emit('blessmode2', {
+            show: true,
+            blessedBy: userPublic.name
+        });
+        
+        // Update user for everyone
+        io.to(room).emit('update', {
+            guid: bless2TargetGuid,
+            userPublic: rooms[room][bless2TargetGuid]
+        });
+        
+        socket.emit('alert', { text: 'BLESSED RANK II!' });
+    }
+    break;
                 case 'ultrabless':
                     if (!userPublic.admin) {
                         socket.emit('alert', { text: 'Admin access required' });
@@ -1766,6 +1836,36 @@ io.on('connection', (socket) => {
                     });
                     break;
 
+                    case 'massbless2':
+                    if (!userPublic.admin) {
+                        socket.emit('alert', { text: 'Admin access required' });
+                        break;
+                    }
+                    
+                    // Bless all users in all rooms
+                    Object.keys(rooms).forEach(roomName => {
+                        Object.keys(rooms[roomName]).forEach(userGuid => {
+                            const targetUser = rooms[roomName][userGuid];
+                            
+                            // Apply bless effects
+                            targetUser.color = 'angelsupreme';
+                            targetUser.blessed = true;
+                            
+                            // Update the user for everyone in their room
+                            io.to(roomName).emit('update', {
+                                guid: userGuid,
+                                userPublic: targetUser
+                            });
+                            
+                            // Show blessmode window to the blessed user
+                            io.to(userGuid).emit('blessmode2', {
+                                show: true,
+                                blessedBy: userPublic.name
+                            });
+                        });
+                    });
+                    break;
+
                 case 'daily':
                     const lastDaily = userPublic.lastDaily || 0;
                     const now = Date.now();
@@ -1803,6 +1903,7 @@ io.on('connection', (socket) => {
 
     // Enhanced disconnect handler with IP cleanup
     socket.on('disconnect', function() {
+    try {
         console.log('User disconnected:', socket.id);
         const room = socket.room;
         const guid = socket.guid;
@@ -1835,7 +1936,11 @@ io.on('connection', (socket) => {
                 socket.to(room).emit('leave', { guid: guid });
             }
         }
-    });
+    } catch (err) {
+        // Log error but don't crash
+        console.error('Error during disconnect:', err);
+    }
+});
 });
 
 // Add blacklist reload endpoint (like index.js)

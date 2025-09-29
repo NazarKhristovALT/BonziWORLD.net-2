@@ -3,7 +3,7 @@ var passcode = "";
 var err = false;
 var admin = false;
 // Color configuration (easier to extend)
-var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
+var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
 var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 var HATS_LOADED = false; 
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
@@ -163,13 +163,10 @@ function showBlessmode2Window(data) {
                 
                 <h3>Skins</h3>
                 <div class="roulette">
-                    <div class="card angelsupreme" onclick="applyBlessedSkin('angelsupreme')"></div>
-                    <div class="card megatrons" onclick="applyBlessedSkin('megatron')"></div>
-                    <div class="card crazy" onclick="applyBlessedSkin('crazy')"></div>
-                    <div class="card angel" onclick="applyBlessedSkin('angel')"></div>
-                    <div class="card glow" onclick="applyBlessedSkin('glow')"></div>
-                    <div class="card noob" onclick="applyBlessedSkin('noob')"></div>
-                    <div class="card gold" onclick="applyBlessedSkin('gold')"></div>
+                    <div class="card pope" onclick="applyBlessedSkin('pope')"></div>
+                    <div class="card pope" onclick="applyBlessedSkin('pope')"></div>
+                    <div class="card pope" onclick="applyBlessedSkin('pope')"></div>
+                    <div class="card pope" onclick="applyBlessedSkin('pope')"></div>
                 </div>
                 
                 <h3>Hats</h3>
@@ -178,10 +175,6 @@ function showBlessmode2Window(data) {
                     <div class="cardhat mario2" onclick="applyBlessedHat('mario2')"></div>
                     <div class="cardhat illuminati2" onclick="applyBlessedHat('illuminati2')"></div>
                     <div class="cardhat king2" onclick="applyBlessedHat('king2')"></div>
-                    <div class="cardhat windows2" onclick="applyBlessedHat('windows2')"></div>
-                    <div class="cardhat premium" onclick="applyBlessedHat('premium')"></div>
-                    <div class="cardhat gamer" onclick="applyBlessedHat('gamer')"></div>
-                    <div class="cardhat megatron" onclick="applyBlessedHat('megatron')"></div>
                 </div>
             </div>
         </div>
@@ -1163,7 +1156,7 @@ $.contextMenu({
                         }
                     },
                     ultrabless: {
-                        name: "Ultra Bless (Old)",
+                        name: "Ultra Bless",
                         callback: function () {
                             socket.emit('command', { list: ["ultrabless", d.userPublic.name] });
                         }
@@ -1181,13 +1174,6 @@ $.contextMenu({
                         name: "Bless User",
                         callback: function () {
                             socket.emit('command', { list: ["bless", d.userPublic.name] });
-                        }
-                    },
-                    //alright man!!!!!!!!!!!!!!!!!!!!!
-                    bless2: {
-                        name: "Bless (Rank II)",
-                        callback: function () {
-                            socket.emit('command', { list: ["bless2", d.userPublic.name] });
                         }
                     },
                     changename: {
@@ -1757,51 +1743,33 @@ $.contextMenu({
                 },
                 {
                     key: "updateName",
-value: function () {
-    var nameHtml = "";
-    
-    // Add tag above name if it exists
-    if (this.userPublic.tag && this.userPublic.tag.trim()) {
-        nameHtml += "<div style=\"font-size:10px;color:#666;margin-bottom:2px;text-align:center;\">" + 
-                   this.userPublic.tag.trim() + "</div>";
-    }
-    
-    nameHtml += this.userPublic.name;
-    
-    // Admin/Owner tag
-    if (this.userPublic.admin) {
-        nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-            "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-            "OWNER " +
-            "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-            "</span>";
-    }
-    // Temp Owner tag (moderator2)
-    else if (this.userPublic.tempowner) {
-        nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-            "<img src=\"./img/misc/tempowner.png\" width=\"14\" height=\"14\" alt=\"tempowner\" onerror=\"this.style.display='none'\">" +
-            "TEMP OWNER" +
-            "<img src=\"./img/misc/tempowner.png\" width=\"14\" height=\"14\" alt=\"tempowner\" onerror=\"this.style.display='none'\">" +
-            "</span>";
-    }
-    // Dev tag (moderator1) 
-    else if (this.userPublic.dev) {
-        nameHtml += " <span style=\"background:#000;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-            "<img src=\"./img/misc/dev.png\" width=\"14\" height=\"14\" alt=\"dev\" onerror=\"this.style.display='none'\">" +
-            "DEV" +
-            "<img src=\"./img/misc/dev.png\" width=\"14\" height=\"14\" alt=\"dev\" onerror=\"this.style.display='none'\">" +
-            "</span>";
-    }
-    // Regular moderator tag
-    else if (this.userPublic.moderator) {
-        nameHtml += " <span style=\"background:#4177c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-            "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"mod\" onerror=\"this.style.display='none'\">" +
-            "MOD " +
-            "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"mod\" onerror=\"this.style.display='none'\">" +
-            "</span>";
-    }
-    this.$nametag.html(nameHtml);
-},
+                    value: function () {
+                        var nameHtml = "";
+                        
+                        // Add tag above name if it exists
+                        if (this.userPublic.tag && this.userPublic.tag.trim()) {
+                            nameHtml += "<div style=\"font-size:10px;color:#666;margin-bottom:2px;text-align:center;\">" + 
+                                       this.userPublic.tag.trim() + "</div>";
+                        }
+                        
+                        nameHtml += this.userPublic.name;
+                        
+                        if (this.userPublic.admin) {
+                            nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+                                "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "OWNER " +
+                                "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "</span>";
+                        }
+                        if (this.userPublic.moderator) {
+                            nameHtml += " <span style=\"background:#4177c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+                                "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "MOD " +
+                                "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "</span>";
+                        }
+                        this.$nametag.html(nameHtml);
+                    },
                 },
                 {
                     key: "youtube",

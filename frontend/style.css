@@ -960,10 +960,70 @@ hr {
 }
 
 .angel { background-image: url("./img/desktop/angel.webp"); }
+.pope { background-image: url("./img/desktop/pope.webp"); }
 .glow { background-image: url("./img/desktop/glow.webp"); }
 .noob { background-image: url("./img/desktop/noob.webp"); }
 .gold { background-image: url("./img/desktop/gold.webp"); }
+.crazy { background-image: url("./img/desktop/crazy.webp"); }
+.megatrons { background-image: url("./img/desktop/megatrons.webp"); }
+.angelsupreme { background-image: url("./img/desktop/angelsupreme.webp"); }
 .windows2 { background-image: url("./img/hats/windows2.webp"); }
+.windows10 { background-image: url("./img/hats/windows10.webp"); }
+.mario2 { background-image: url("./img/hats/mario2.webp"); }
+.king2 { background-image: url("./img/hats/king2.webp"); }
+.illuminati2 { background-image: url("./img/hats/illuminati2.webp"); }
 .premium { background-image: url("./img/hats/premium.webp"); }
 .gamer { background-image: url("./img/hats/gamer.webp"); }
 .megatron { background-image: url("./img/hats/megatron.webp"); }
+
+
+
+
+
+.window2 {
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+    height: 100%;
+}
+
+.window_header2 {
+    display: flex;
+    user-select: none;
+    align-items: center;
+    height: 32px;
+    padding: 2px 7px 0 10px;
+    border-image: url("./img/desktop/window_header_2.png") 0 9 fill / 0px 9px;
+    image-rendering: pixelated;
+    color: gold;
+    font-size: 16px;
+    text-shadow: #0006 2px 2px 1px;
+}
+
+.window_body2 {
+    flex: 1;
+    padding: 4px 6px 6px 6px;
+    border-image: url("./img/desktop/window_border_2.png") 0 6 6 6 / 0px 6px 6px 6px;
+    image-rendering: pixelated;
+    background: #ffe;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.window_close2 {
+    margin-left: auto;
+    width: 21px;
+    height: 21px;
+    margin-bottom: 2px;
+    background-image: url("./img/desktop/close_2.png");
+    cursor: pointer;
+}
+
+.window_close2:hover {
+    background-position-y: -21px;
+}
+
+.window_close2:active {
+    background-position-y: -42px;
+}

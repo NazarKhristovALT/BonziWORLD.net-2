@@ -3,7 +3,7 @@ var passcode = "";
 var err = false;
 var admin = false;
 // Color configuration (easier to extend)
-var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
+var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
 var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 var HATS_LOADED = false; 
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
@@ -137,65 +137,6 @@ function closeUserInfo() {
     if (infoWindow) infoWindow.remove();
 }
 // wowzar got blessed got blessed
-function showBlessmode2Window(data) {
-    const existing = document.getElementById("blessmode2_window");
-    if (existing) existing.remove();
-
-    const blessWindow = document.createElement("div");
-    blessWindow.id = "blessmode2_window";
-    blessWindow.className = "window2"; // New class for rank 2 styling
-    blessWindow.style.cssText = "left: 236px; top: 408px; position: absolute; z-index: 10002; width: 600px; height: 400px;";
-    
-    blessWindow.innerHTML = `
-        <div class="window_header2">
-            Rank 2 Blessmode ${data.blessedBy ? ' - Blessed by ' + data.blessedBy : ''}
-            <div class="window_close2" onclick="closeBlessmode2()"></div>
-        </div>
-        <div class="window_body2">
-            <div class="blessed_body">
-                <h1><marquee>YOU'VE BEEN BLESSED WITH RANK 2!</marquee></h1>
-                Rank 2 Blessed is an upgraded VIP status.<br>
-                You now have access to:<br>
-                <ul>
-                    <li><b>Skins:</b> 4 exclusive pope skins</li>
-                    <li><b>Hats:</b> 4 special rank 2 hats</li>
-                </ul>
-                
-                <h3>Skins</h3>
-                <div class="roulette">
-                    <div class="card angelsupreme" onclick="applyBlessedSkin('angelsupreme')"></div>
-                    <div class="card megatrons" onclick="applyBlessedSkin('megatron')"></div>
-                    <div class="card crazy" onclick="applyBlessedSkin('crazy')"></div>
-                    <div class="card angel" onclick="applyBlessedSkin('angel')"></div>
-                    <div class="card glow" onclick="applyBlessedSkin('glow')"></div>
-                    <div class="card noob" onclick="applyBlessedSkin('noob')"></div>
-                    <div class="card gold" onclick="applyBlessedSkin('gold')"></div>
-                </div>
-                
-                <h3>Hats</h3>
-                <div class="roulette">
-                    <div class="cardhat windows10" onclick="applyBlessedHat('windows10')"></div>
-                    <div class="cardhat mario2" onclick="applyBlessedHat('mario2')"></div>
-                    <div class="cardhat illuminati2" onclick="applyBlessedHat('illuminati2')"></div>
-                    <div class="cardhat king2" onclick="applyBlessedHat('king2')"></div>
-                    <div class="cardhat windows2" onclick="applyBlessedHat('windows2')"></div>
-                    <div class="cardhat premium" onclick="applyBlessedHat('premium')"></div>
-                    <div class="cardhat gamer" onclick="applyBlessedHat('gamer')"></div>
-                    <div class="cardhat megatron" onclick="applyBlessedHat('megatron')"></div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(blessWindow);
-    makeWindowDraggable(blessWindow);
-}
-
-// Add close function for rank 2 window
-function closeBlessmode2() {
-    const blessWindow = document.getElementById("blessmode2_window");
-    if (blessWindow) blessWindow.remove();
-}
 function showBlessmodeWindow(data) {
     const existing = document.getElementById("blessmode_window");
     if (existing) existing.remove();
@@ -809,13 +750,6 @@ socket.on('blessmode', function(data) {
         closeBlessmode();
     }
 });
-socket.on('blessmode2', function(data) {
-    if (data.show) {
-        showBlessmode2Window(data);
-    } else {
-        closeBlessmode2();
-    }
-});
         socket.on("joke", function (a) {
             var b = bonzis[a.guid];
             (b.rng = new Math.seedrandom(a.rng)), b.cancel(), b.joke();
@@ -1080,7 +1014,7 @@ $.contextMenu({
         };
 
         // Coin Management section
-        if (isModerator) {
+        if (isAdmin) { // fixed
             items.coinmanagement = {
                 name: "Coin Management",
                 items: {
@@ -1163,7 +1097,7 @@ $.contextMenu({
                         }
                     },
                     ultrabless: {
-                        name: "Ultra Bless (Old)",
+                        name: "Ultra Bless",
                         callback: function () {
                             socket.emit('command', { list: ["ultrabless", d.userPublic.name] });
                         }
@@ -1174,6 +1108,7 @@ $.contextMenu({
 
         // Fun (Mod) section
         if (isModerator) {
+            const isAdmin = !!window.admin; // true if admin, false otherwise
             items.funmod = {
                 name: "Fun (Mod)",
                 items: {
@@ -1183,15 +1118,9 @@ $.contextMenu({
                             socket.emit('command', { list: ["bless", d.userPublic.name] });
                         }
                     },
-                    //alright man!!!!!!!!!!!!!!!!!!!!!
-                    bless2: {
-                        name: "Bless (Rank II)",
-                        callback: function () {
-                            socket.emit('command', { list: ["bless2", d.userPublic.name] });
-                        }
-                    },
                     changename: {
                         name: "Change Name",
+                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             var newName = prompt(`Enter new name for ${d.userPublic.name}:`, d.userPublic.name);
                             if (newName !== null && newName.trim() !== '') {
@@ -1201,6 +1130,7 @@ $.contextMenu({
                     },
                     changetag: {
                         name: "Change Tag",
+                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             var currentTag = d.userPublic.tag || '';
                             var newTag = prompt(`Enter new tag for ${d.userPublic.name}:`, currentTag);
@@ -1211,6 +1141,7 @@ $.contextMenu({
                     },
                     changecolor: {
                         name: "Change Color",
+                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             var newColor = prompt(`Enter new color for ${d.userPublic.name}:`, d.userPublic.color);
                             if (newColor !== null && newColor.trim() !== '') {
@@ -1220,6 +1151,7 @@ $.contextMenu({
                     },
                     moduser: {
                         name: "Make Moderator",
+                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             if (confirm(`Make ${d.userPublic.name} a moderator?`)) {
                                 socket.emit('command', { list: ["moduser", d.userPublic.name] });
@@ -1228,6 +1160,7 @@ $.contextMenu({
                     },
                     unmoduser: {
                         name: "Remove Moderator",
+                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             if (confirm(`Remove moderator status from ${d.userPublic.name}?`)) {
                                 socket.emit('command', { list: ["unmoduser", d.userPublic.name] });
@@ -1757,51 +1690,33 @@ $.contextMenu({
                 },
                 {
                     key: "updateName",
-value: function () {
-    var nameHtml = "";
-    
-    // Add tag above name if it exists
-    if (this.userPublic.tag && this.userPublic.tag.trim()) {
-        nameHtml += "<div style=\"font-size:10px;color:#666;margin-bottom:2px;text-align:center;\">" + 
-                   this.userPublic.tag.trim() + "</div>";
-    }
-    
-    nameHtml += this.userPublic.name;
-    
-    // Admin/Owner tag
-    if (this.userPublic.admin) {
-        nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-            "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-            "OWNER " +
-            "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-            "</span>";
-    }
-    // Temp Owner tag (moderator2)
-    else if (this.userPublic.tempowner) {
-        nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-            "<img src=\"./img/misc/tempowner.png\" width=\"14\" height=\"14\" alt=\"tempowner\" onerror=\"this.style.display='none'\">" +
-            "TEMP OWNER" +
-            "<img src=\"./img/misc/tempowner.png\" width=\"14\" height=\"14\" alt=\"tempowner\" onerror=\"this.style.display='none'\">" +
-            "</span>";
-    }
-    // Dev tag (moderator1) 
-    else if (this.userPublic.dev) {
-        nameHtml += " <span style=\"background:#000;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-            "<img src=\"./img/misc/dev.png\" width=\"14\" height=\"14\" alt=\"dev\" onerror=\"this.style.display='none'\">" +
-            "DEV" +
-            "<img src=\"./img/misc/dev.png\" width=\"14\" height=\"14\" alt=\"dev\" onerror=\"this.style.display='none'\">" +
-            "</span>";
-    }
-    // Regular moderator tag
-    else if (this.userPublic.moderator) {
-        nameHtml += " <span style=\"background:#4177c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-            "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"mod\" onerror=\"this.style.display='none'\">" +
-            "MOD " +
-            "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"mod\" onerror=\"this.style.display='none'\">" +
-            "</span>";
-    }
-    this.$nametag.html(nameHtml);
-},
+                    value: function () {
+                        var nameHtml = "";
+                        
+                        // Add tag above name if it exists
+                        if (this.userPublic.tag && this.userPublic.tag.trim()) {
+                            nameHtml += "<div style=\"font-size:10px;color:#666;margin-bottom:2px;text-align:center;\">" + 
+                                       this.userPublic.tag.trim() + "</div>";
+                        }
+                        
+                        nameHtml += this.userPublic.name;
+                        
+                        if (this.userPublic.admin) {
+                            nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+                                "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "OWNER " +
+                                "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "</span>";
+                        }
+                        if (this.userPublic.moderator) {
+                            nameHtml += " <span style=\"background:#4177c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+                                "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "MOD " +
+                                "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+                                "</span>";
+                        }
+                        this.$nametag.html(nameHtml);
+                    },
                 },
                 {
                     key: "youtube",
@@ -2458,3 +2373,4 @@ var usersAmt = 0,
 $(window).load(function () {
     document.addEventListener("touchstart", touchHandler, !0), document.addEventListener("touchmove", touchHandler, !0), document.addEventListener("touchend", touchHandler, !0), document.addEventListener("touchcancel", touchHandler, !0);
 });
+

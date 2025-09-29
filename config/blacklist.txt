@@ -1,2 +1,8 @@
 # Add blocked words/phrases here
 # One per line
+penis
+nigger
+nigga
+NIGGA
+NIGGER
+PENIS
