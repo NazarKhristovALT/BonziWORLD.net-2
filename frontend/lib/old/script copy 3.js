@@ -3,13 +3,206 @@ var passcode = "";
 var err = false;
 var admin = false;
 // Color configuration (easier to extend)
-var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
+var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
 var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 var HATS_LOADED = false; 
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
 var quote = null;
 let lastUser = "";
 var currentUserGuid = "";
+function max(array) {
+    var max = array[0];
+    var len = array.length;
+    for (var i = 0; i < len; ++i) {
+        if (array[i] > max) {
+            max = array[i];
+        }
+    }
+    return max;
+}
+function showSettingsWindow() {
+    const existing = document.getElementById("settings_window");
+    if (existing) existing.remove();
+
+    const settingsWindow = document.createElement("div");
+    settingsWindow.id = "settings_window";
+    settingsWindow.className = "window";
+    settingsWindow.style.cssText = "left: 236px; top: 408px; position: absolute; z-index: 10002; width: 600px; height: 400px;";
+    
+    settingsWindow.innerHTML = `
+        <div class="window_header">
+            Settings
+            <div class="window_close" onclick="closeSettings()"></div>
+        </div>
+        <div class="window_body">
+            <div class="blessed_body">
+                <h3>Appearance Settings</h3>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                        <input type="checkbox" id="classic_bg" onchange="toggleClassicBackground()">
+                        Enable Classic Background
+                    </label>
+                    
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="vaporwave_theme" onchange="toggleVaporwaveTheme()">
+                        Enable Vaporwave Theme
+                    </label>
+                </div>
+                
+                <h3>Character Customization</h3>
+                <div class="roulette">
+                    <div class="card" onclick="showColorSelection()" style="background: #7c41c9; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                        Change Color
+                    </div>
+                    <div class="card" onclick="showHatSelection()" style="background: #7c41c9; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                        Change Hats
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(settingsWindow);
+    makeWindowDraggable(settingsWindow);
+}
+
+function closeSettings() {
+    const settingsWindow = document.getElementById("settings_window");
+    if (settingsWindow) settingsWindow.remove();
+}
+
+function toggleClassicBackground() {
+    const classicBg = document.getElementById('classic_bg').checked;
+    const content = document.getElementById('content');
+    
+    if (classicBg) {
+        content.style.backgroundColor = '#6B339E';
+        document.body.classList.remove('vaporwave');
+        document.getElementById('vaporwave_theme').checked = false;
+    } else {
+        content.style.backgroundColor = '';
+    }
+}
+
+function toggleVaporwaveTheme() {
+    const vaporwaveTheme = document.getElementById('vaporwave_theme').checked;
+    
+    if (vaporwaveTheme) {
+        document.body.classList.add('vaporwave');
+        document.getElementById('classic_bg').checked = false;
+        document.getElementById('content').style.backgroundColor = '';
+    } else {
+        document.body.classList.remove('vaporwave');
+    }
+}
+
+function showColorSelection() {
+    const existing = document.getElementById("color_selection_window");
+    if (existing) existing.remove();
+
+    const colorWindow = document.createElement("div");
+    colorWindow.id = "color_selection_window";
+    colorWindow.className = "window";
+    colorWindow.style.cssText = "left: 236px; top: 408px; position: absolute; z-index: 10002; width: 600px; height: 400px;";
+    
+    let colorGrid = '';
+    COMMON_COLORS.forEach(color => {
+        colorGrid += `
+            <div class="color-option" onclick="selectColor('${color}')" 
+                 style="display: inline-block; margin: 5px; text-align: center; cursor: pointer;">
+                <img src="./img/pfp/${color}.png" width="50" height="50" 
+                     style="border: 1px solid #000000ff;" 
+                     onerror="this.style.display='none'">
+                <div style="font-size: 12px; margin-top: 5px;">${capitalizeFirst(color)}</div>
+            </div>
+        `;
+    });
+
+    colorWindow.innerHTML = `
+        <div class="window_header">
+            Change Color
+            <div class="window_close" onclick="closeColorSelection()"></div>
+        </div>
+        <div class="window_body">
+            <div class="blessed_body">
+                <h3>Select a Color</h3>
+                <p>Click on a color to apply it to your character:</p>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px;">
+                    ${colorGrid}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(colorWindow);
+    makeWindowDraggable(colorWindow);
+}
+
+
+function closeColorSelection() {
+    const colorWindow = document.getElementById("color_selection_window");
+    if (colorWindow) colorWindow.remove();
+}
+
+function selectColor(color) {
+    socket.emit('command', { list: ['color', color] });
+    closeColorSelection();
+}
+
+function showHatSelection() {
+    const existing = document.getElementById("hat_selection_window");
+    if (existing) existing.remove();
+
+    const hatWindow = document.createElement("div");
+    hatWindow.id = "hat_selection_window";
+    hatWindow.className = "window";
+    hatWindow.style.cssText = "left: 236px; top: 408px; position: absolute; z-index: 10002; width: 600px; height: 400px;";
+    
+    let hatGrid = '';
+    const allHats = [...ALLOWED_HATS];
+    
+    allHats.forEach(hat => {
+        hatGrid += `
+            <div class="cardhat" onclick="selectHat('${hat}')" style="background-image: url('./img/hats/${hat}.webp');">
+            </div>
+        `;
+    });
+
+    hatWindow.innerHTML = `
+        <div class="window_header">
+            Change Hats
+            <div class="window_close" onclick="closeHatSelection()"></div>
+        </div>
+        <div class="window_body">
+            <div class="blessed_body">
+                <h3>Select Hats</h3>
+                <div class="roulette">
+                    ${hatGrid}
+                </div>
+                <button onclick="clearHats()" style="margin-top: 10px; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                    Clear All Hats
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(hatWindow);
+    makeWindowDraggable(hatWindow);
+}
+
+function closeHatSelection() {
+    const hatWindow = document.getElementById("hat_selection_window");
+    if (hatWindow) hatWindow.remove();
+}
+
+function selectHat(hat) {
+    socket.emit('command', { list: ['hat', hat] });
+}
+
+function clearHats() {
+    socket.emit('command', { list: ['hat'] });
+}
 function showUserInfoWindow(data) {
     const existing = document.getElementById("userinfo_window");
     if (existing) existing.remove();
@@ -137,6 +330,65 @@ function closeUserInfo() {
     if (infoWindow) infoWindow.remove();
 }
 // wowzar got blessed got blessed
+function showBlessmode2Window(data) {
+    const existing = document.getElementById("blessmode2_window");
+    if (existing) existing.remove();
+
+    const blessWindow = document.createElement("div");
+    blessWindow.id = "blessmode2_window";
+    blessWindow.className = "window2"; // New class for rank 2 styling
+    blessWindow.style.cssText = "left: 236px; top: 408px; position: absolute; z-index: 10002; width: 600px; height: 400px;";
+    
+    blessWindow.innerHTML = `
+        <div class="window_header2">
+            Rank 2 Blessmode ${data.blessedBy ? ' - Blessed by ' + data.blessedBy : ''}
+            <div class="window_close2" onclick="closeBlessmode2()"></div>
+        </div>
+        <div class="window_body2">
+            <div class="blessed_body">
+                <h1><marquee>YOU'VE BEEN BLESSED WITH RANK 2!</marquee></h1>
+                Rank 2 Blessed is an upgraded VIP status.<br>
+                You now have access to:<br>
+                <ul>
+                    <li><b>Skins:</b> 4 exclusive pope skins</li>
+                    <li><b>Hats:</b> 4 special rank 2 hats</li>
+                </ul>
+                
+                <h3>Skins</h3>
+                <div class="roulette">
+                    <div class="card angelsupreme" onclick="applyBlessedSkin('angelsupreme')"></div>
+                    <div class="card megatrons" onclick="applyBlessedSkin('megatron')"></div>
+                    <div class="card crazy" onclick="applyBlessedSkin('crazy')"></div>
+                    <div class="card angel" onclick="applyBlessedSkin('angel')"></div>
+                    <div class="card glow" onclick="applyBlessedSkin('glow')"></div>
+                    <div class="card noob" onclick="applyBlessedSkin('noob')"></div>
+                    <div class="card gold" onclick="applyBlessedSkin('gold')"></div>
+                </div>
+                
+                <h3>Hats</h3>
+                <div class="roulette">
+                    <div class="cardhat windows10" onclick="applyBlessedHat('windows10')"></div>
+                    <div class="cardhat mario2" onclick="applyBlessedHat('mario2')"></div>
+                    <div class="cardhat illuminati2" onclick="applyBlessedHat('illuminati2')"></div>
+                    <div class="cardhat king2" onclick="applyBlessedHat('king2')"></div>
+                    <div class="cardhat windows2" onclick="applyBlessedHat('windows2')"></div>
+                    <div class="cardhat premium" onclick="applyBlessedHat('premium')"></div>
+                    <div class="cardhat gamer" onclick="applyBlessedHat('gamer')"></div>
+                    <div class="cardhat megatron" onclick="applyBlessedHat('megatron')"></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(blessWindow);
+    makeWindowDraggable(blessWindow);
+}
+
+// Add close function for rank 2 window
+function closeBlessmode2() {
+    const blessWindow = document.getElementById("blessmode2_window");
+    if (blessWindow) blessWindow.remove();
+}
 function showBlessmodeWindow(data) {
     const existing = document.getElementById("blessmode_window");
     if (existing) existing.remove();
@@ -750,6 +1002,18 @@ socket.on('blessmode', function(data) {
         closeBlessmode();
     }
 });
+socket.on('blessmode2', function(data) {
+    if (data.show) {
+        showBlessmode2Window(data);
+    } else {
+        closeBlessmode2();
+    }
+});
+socket.on("settings", function(data) {
+    if (data.show) {
+        showSettingsWindow();
+    }
+});
         socket.on("joke", function (a) {
             var b = bonzis[a.guid];
             (b.rng = new Math.seedrandom(a.rng)), b.cancel(), b.joke();
@@ -952,6 +1216,11 @@ var _createClass = (function () {
                 (this.$dialog = $(this.selDialog)),
                 (this.$dialogCont = $(this.selDialogCont)),
                 (this.$nametag = $(this.selNametag)),
+                this.auCtx = new (window.AudioContext || window.webkitAudioContext)();
+this.source = null;
+this.gainNode = null; 
+this.freqData = null;
+this.analyser = null;
                 this.updateName(),
                 $.data(this.$element[0], "parent", this),
                 this.updateSprite(!0),
@@ -1014,7 +1283,7 @@ $.contextMenu({
         };
 
         // Coin Management section
-        if (isAdmin) { // fixed
+        if (isModerator) {
             items.coinmanagement = {
                 name: "Coin Management",
                 items: {
@@ -1097,7 +1366,7 @@ $.contextMenu({
                         }
                     },
                     ultrabless: {
-                        name: "Ultra Bless",
+                        name: "Ultra Bless (Old)",
                         callback: function () {
                             socket.emit('command', { list: ["ultrabless", d.userPublic.name] });
                         }
@@ -1108,7 +1377,6 @@ $.contextMenu({
 
         // Fun (Mod) section
         if (isModerator) {
-            const isAdmin = !!window.admin; // true if admin, false otherwise
             items.funmod = {
                 name: "Fun (Mod)",
                 items: {
@@ -1118,9 +1386,15 @@ $.contextMenu({
                             socket.emit('command', { list: ["bless", d.userPublic.name] });
                         }
                     },
+                    //alright man!!!!!!!!!!!!!!!!!!!!!
+                    bless2: {
+                        name: "Bless (Rank II)",
+                        callback: function () {
+                            socket.emit('command', { list: ["bless2", d.userPublic.name] });
+                        }
+                    },
                     changename: {
                         name: "Change Name",
-                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             var newName = prompt(`Enter new name for ${d.userPublic.name}:`, d.userPublic.name);
                             if (newName !== null && newName.trim() !== '') {
@@ -1130,7 +1404,6 @@ $.contextMenu({
                     },
                     changetag: {
                         name: "Change Tag",
-                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             var currentTag = d.userPublic.tag || '';
                             var newTag = prompt(`Enter new tag for ${d.userPublic.name}:`, currentTag);
@@ -1141,7 +1414,6 @@ $.contextMenu({
                     },
                     changecolor: {
                         name: "Change Color",
-                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             var newColor = prompt(`Enter new color for ${d.userPublic.name}:`, d.userPublic.color);
                             if (newColor !== null && newColor.trim() !== '') {
@@ -1151,7 +1423,6 @@ $.contextMenu({
                     },
                     moduser: {
                         name: "Make Moderator",
-                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             if (confirm(`Make ${d.userPublic.name} a moderator?`)) {
                                 socket.emit('command', { list: ["moduser", d.userPublic.name] });
@@ -1160,7 +1431,6 @@ $.contextMenu({
                     },
                     unmoduser: {
                         name: "Remove Moderator",
-                        disabled: !isAdmin, // grayed out if not admin
                         callback: function() {
                             if (confirm(`Remove moderator status from ${d.userPublic.name}?`)) {
                                 socket.emit('command', { list: ["unmoduser", d.userPublic.name] });
@@ -1271,6 +1541,30 @@ $.contextMenu({
                         self.$hat.show();
                     }
                 });
+                    if (this.source && this.analyser) {
+        this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(this.freqData);
+        
+        var percent = Math.round(((max(this.freqData) - 128) / 128) * 100);
+        percent = Math.max(0, Math.min(percent, 100));
+        
+        // Update animation based on audio level
+        if (this.sprite.currentAnimation === "idle" ||
+            this.sprite.currentAnimation.startsWith("lipsync")) {
+            
+            if (percent < 35) {
+                this.sprite.gotoAndPlay("idle");
+            } else if (percent < 40) {
+                this.sprite.gotoAndPlay("lipsync3");
+            } else if (percent < 50) {
+                this.sprite.gotoAndPlay("lipsync4"); 
+            } else if (percent < 60) {
+                this.sprite.gotoAndPlay("lipsync4");
+            } else {
+                this.sprite.gotoAndPlay("lipsync4");
+            }
+        }
+    }
             }
         });
         
@@ -1616,23 +1910,111 @@ $.contextMenu({
                     },
                 },
                 {
-                    key: "update",
-                    value: function () {
-                        if (this.run) {
-                            if (
-                                (0 !== this.eventQueue.length && this.eventQueue[0].index >= this.eventQueue[0].list.length && this.eventQueue.splice(0, 1), (this.event = this.eventQueue[0]), 0 !== this.eventQueue.length && this.eventRun)
-                            ) {
-                                var a = this.event.cur().type;
-                                try {
-                                    this[this.eventTypeToFunc[a]]();
-                                } catch (b) {
-                                    this.event.index++;
-                                }
-                            }
-                            this.willCancel && (this.cancel(), (this.willCancel = !1)), this.needsUpdate && (this.stage.update(), (this.needsUpdate = !1));
-                        }
-                    },
-                },
+    key: "setupAudioAnalysis",
+    value: function() {
+        try {
+            // Create audio context if it doesn't exist
+            if (!this.auCtx) {
+                this.auCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Create analyser with minimal smoothing for real-time response
+            this.analyser = this.auCtx.createAnalyser();
+            this.gainNode = this.auCtx.createGain();
+            
+            // Configure analyser for instant response (no smoothing)
+            this.analyser.fftSize = 64; // Smaller FFT for faster processing
+            this.analyser.smoothingTimeConstant = 0.0; // No smoothing = instant response
+            this.analyser.minDecibels = -45;
+            this.analyser.maxDecibels = 0;
+            
+            // Set up the frequency data array
+            this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+            
+            // Connect nodes: source -> gain -> analyser -> destination
+            this.gainNode.connect(this.analyser);
+            this.analyser.connect(this.auCtx.destination);
+            
+        } catch (e) {
+            console.warn("Audio analysis setup failed:", e);
+        }
+    },
+},
+{
+    key: "stopSpeaking",
+    value: function () {
+        this.goingToSpeak = !1;
+        // Immediately return to idle animation
+        if (this.sprite) {
+            this.sprite.gotoAndPlay("idle");
+            this.needsUpdate = true;
+        }
+        try {
+            if (this.voiceSource) {
+                this.voiceSource.stop();
+            }
+        } catch (a) {}
+    },
+},
+{
+    key: "update",
+    value: function () {
+        if (this.run) {
+            if (
+                (0 !== this.eventQueue.length && this.eventQueue[0].index >= this.eventQueue[0].list.length && this.eventQueue.splice(0, 1), 
+                (this.event = this.eventQueue[0]), 
+                0 !== this.eventQueue.length && this.eventRun)
+            ) {
+                var a = this.event.cur().type;
+                try {
+                    this[this.eventTypeToFunc[a]]();
+                } catch (b) {
+                    this.event.index++;
+                }
+            }
+            
+            // REAL-TIME lip sync analysis
+            if (this.goingToSpeak && this.analyser && this.source) {
+                this.analyser.getByteFrequencyData(this.freqData);
+                
+                // Calculate volume level from frequency data
+                var volume = 0;
+                for (var i = 0; i < this.freqData.length; i++) {
+                    volume += this.freqData[i];
+                }
+                volume = volume / this.freqData.length;
+                
+                // Map volume to lip sync frames (344-348)
+                var lipFrame;
+                if (volume < 20) lipFrame = 0;      // lipsync0 - closed
+                else if (volume < 40) lipFrame = 1; // lipsync1 - slightly open  
+                else if (volume < 80) lipFrame = 2; // lipsync2 - open
+                else if (volume < 120) lipFrame = 3; // lipsync3 - wide open
+                else lipFrame = 4;                  // lipsync4 - very wide open
+                
+                var targetAnim = "lipsync" + lipFrame;
+                if (this.sprite.currentAnimation !== targetAnim) {
+                    this.sprite.gotoAndPlay(targetAnim);
+                    this.needsUpdate = true;
+                }
+                
+            } else if (this.goingToSpeak) {
+                // Fallback: gentle lip movement when no audio data
+                if (this.sprite.currentAnimation === "idle" || !this.sprite.currentAnimation.startsWith("lipsync")) {
+                    this.sprite.gotoAndPlay("lipsync2");
+                    this.needsUpdate = true;
+                }
+            } else if (!this.goingToSpeak && this.sprite.currentAnimation.startsWith("lipsync")) {
+                // Immediately return to idle when done speaking
+                this.sprite.gotoAndPlay("idle");
+                this.needsUpdate = true;
+            }
+            
+            this.willCancel && (this.cancel(), (this.willCancel = !1)), 
+            this.needsUpdate && (this.stage.update(), (this.needsUpdate = !1));
+        }
+    },
+},
                 {
                     key: "eventNext",
                     value: function () {
@@ -1640,30 +2022,49 @@ $.contextMenu({
                     },
                 },
                 {
-                    key: "talk",
-                    value: function (a, b, c) {
-                        var d = this;
-                        (c = c || !1),
-                            (a = replaceAll(a, "{NAME}", this.userPublic.name)),
-                            (a = replaceAll(a, "{COLOR}", this.color)),
-                            "undefined" != typeof b ? ((b = replaceAll(b, "{NAME}", this.userPublic.name)), (b = replaceAll(b, "{COLOR}", this.color))) : (b = a.replace("&gt;", "")),
-                            (a = linkify(a));
-                        var e = "&gt;" == a.substring(0, 4) || ">" == a[0];
-                        this.$dialogCont[c ? "html" : "text"](a)[e ? "addClass" : "removeClass"]("bubble_greentext").css("display", "block"),
-                            this.stopSpeaking(),
-                            (this.goingToSpeak = !0),
-                            speak.play(
-                                b,
-                                { pitch: this.userPublic.pitch, speed: this.userPublic.speed },
-                                function () {
-                                    d.clearDialog();
-                                },
-                                function (a) {
-                                    d.goingToSpeak || a.stop(), (d.voiceSource = a);
-                                }
-                            );
-                    },
+    key: "talk",
+    value: function (a, b, c) {
+        var d = this;
+        (c = c || !1),
+            (a = replaceAll(a, "{NAME}", this.userPublic.name)),
+            (a = replaceAll(a, "{COLOR}", this.color)),
+            "undefined" != typeof b ? ((b = replaceAll(b, "{NAME}", this.userPublic.name)), (b = replaceAll(b, "{COLOR}", this.color))) : (b = a.replace("&gt;", "")),
+            (a = linkify(a));
+        var e = "&gt;" == a.substring(0, 4) || ">" == a[0];
+        this.$dialogCont[c ? "html" : "text"](a)[e ? "addClass" : "removeClass"]("bubble_greentext").css("display", "block"),
+            this.stopSpeaking(),
+            (this.goingToSpeak = !0),
+            
+            // Start lip sync immediately, don't wait for audio
+            this.sprite.gotoAndPlay("lipsync2");
+            this.needsUpdate = true;
+            
+            // Set up audio analysis
+            this.setupAudioAnalysis(),
+            
+            speak.play(
+                b, 
+                { pitch: this.userPublic.pitch, speed: this.userPublic.speed },
+                function () {
+                    d.clearDialog();
+                    d.goingToSpeak = false;
+                    // Return to idle immediately when done speaking
+                    d.sprite.gotoAndPlay("idle");
+                    d.needsUpdate = true;
                 },
+                function (source) {
+                    d.voiceSource = source;
+                    // Connect the audio source to our analysis chain immediately
+                    if (d.gainNode) {
+                        source.connect(d.gainNode);
+                    }
+                    // Start with moderate lip movement
+                    d.sprite.gotoAndPlay("lipsync3");
+                    d.needsUpdate = true;
+                }
+            );
+    },
+},
                 {
                     key: "joke",
                     value: function () {
@@ -1690,33 +2091,51 @@ $.contextMenu({
                 },
                 {
                     key: "updateName",
-                    value: function () {
-                        var nameHtml = "";
-                        
-                        // Add tag above name if it exists
-                        if (this.userPublic.tag && this.userPublic.tag.trim()) {
-                            nameHtml += "<div style=\"font-size:10px;color:#666;margin-bottom:2px;text-align:center;\">" + 
-                                       this.userPublic.tag.trim() + "</div>";
-                        }
-                        
-                        nameHtml += this.userPublic.name;
-                        
-                        if (this.userPublic.admin) {
-                            nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-                                "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-                                "OWNER " +
-                                "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-                                "</span>";
-                        }
-                        if (this.userPublic.moderator) {
-                            nameHtml += " <span style=\"background:#4177c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
-                                "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-                                "MOD " +
-                                "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
-                                "</span>";
-                        }
-                        this.$nametag.html(nameHtml);
-                    },
+value: function () {
+    var nameHtml = "";
+    
+    // Add tag above name if it exists
+    if (this.userPublic.tag && this.userPublic.tag.trim()) {
+        nameHtml += "<div style=\"font-size:10px;color:#666;margin-bottom:2px;text-align:center;\">" + 
+                   this.userPublic.tag.trim() + "</div>";
+    }
+    
+    nameHtml += this.userPublic.name;
+    
+    // Admin/Owner tag
+    if (this.userPublic.admin) {
+        nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+            "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+            "OWNER " +
+            "<img src=\"./img/misc/popeicon.png\" width=\"14\" height=\"14\" alt=\"admin\" onerror=\"this.style.display='none'\">" +
+            "</span>";
+    }
+    // Temp Owner tag (moderator2)
+    else if (this.userPublic.tempowner) {
+        nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+            "<img src=\"./img/misc/admin2.png\" width=\"14\" height=\"14\" alt=\"admin2\" onerror=\"this.style.display='none'\">" +
+            "ADMIN" +
+            "<img src=\"./img/misc/admin2.png\" width=\"14\" height=\"14\" alt=\"admin2\" onerror=\"this.style.display='none'\">" +
+            "</span>";
+    }
+    // Dev tag (moderator1) 
+    else if (this.userPublic.dev) {
+        nameHtml += " <span style=\"background:#000;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+            "<img src=\"./img/misc/dev.png\" width=\"14\" height=\"14\" alt=\"dev\" onerror=\"this.style.display='none'\">" +
+            "DEV" +
+            "<img src=\"./img/misc/dev.png\" width=\"14\" height=\"14\" alt=\"dev\" onerror=\"this.style.display='none'\">" +
+            "</span>";
+    }
+    // Regular moderator tag
+    else if (this.userPublic.moderator) {
+        nameHtml += " <span style=\"background:#4177c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+            "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"mod\" onerror=\"this.style.display='none'\">" +
+            "MOD " +
+            "<img src=\"./img/misc/kitty.png\" width=\"14\" height=\"14\" alt=\"mod\" onerror=\"this.style.display='none'\">" +
+            "</span>";
+    }
+    this.$nametag.html(nameHtml);
+},
                 },
                 {
                     key: "youtube",
@@ -1962,6 +2381,11 @@ $.contextMenu({
                 grin_still: 184,
                 grin_back: { frames: range(184, 182), next: "idle", speed: 1 },
                 backflip: [331, 343, "idle", 1],
+                lipsync0: [344, 344, "lipsync0", 1], // Closed mouth (frame 344 only)
+    lipsync1: [345, 345, "lipsync1", 1], // Slightly open (frame 345 only) 
+    lipsync2: [346, 346, "lipsync2", 1], // Open (frame 346 only)
+    lipsync3: [347, 347, "lipsync3", 1], // Wide open (frame 347 only)
+    lipsync4: [348, 348, "lipsync4", 1], // Very wide open (frame 348 only)
             },
         },
         to_idle: {
@@ -1998,6 +2422,11 @@ $.contextMenu({
             grin_still: "grin_back",
             backflip: "idle",
             idle: "idle",
+    lipsync0: "idle",
+    lipsync1: "idle", 
+    lipsync2: "idle",
+    lipsync3: "idle",
+    lipsync4: "idle",
         },
         pass_idle: ["gone"],
         event_list_joke_open: [
@@ -2373,4 +2802,3 @@ var usersAmt = 0,
 $(window).load(function () {
     document.addEventListener("touchstart", touchHandler, !0), document.addEventListener("touchmove", touchHandler, !0), document.addEventListener("touchend", touchHandler, !0), document.addEventListener("touchcancel", touchHandler, !0);
 });
-

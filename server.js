@@ -38,7 +38,7 @@ const ALLOWED_HATS = [
     "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "kfc", "bfdi", "bieber", 
     "bowtie", "bucket", "chain", "chef", "clippy", "cowboy", "elon", "evil", 
     "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", 
-    "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "plauge", "sponge", "cobby", "gun"
+    "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "plauge", "sponge", "cobby", "gun", "patrick"
 ];
 
 const BLESSED_HATS = [
@@ -314,18 +314,18 @@ const rooms = {};
 const roomPolls = {};
 
 // Color configuration
-const COMMON_COLORS = [
-    'black',
-    'blue',
-    'brown',
-    'green',
-    'purple',
-    'red',
-    'pink',
-    'white',
-    'yellow',
-    'orange',
-    'cyan',
+const COMMON_COLORS = [ //the ! is putten just because its added lipsync PEEDY NOOO MORE! :(
+    'black', //!
+    'blue', //!
+    'brown', //!
+    'green', //!
+    'purple', //!
+    'red', //!
+    'pink', //!
+    'white', //!
+    'yellow', //!
+    'orange', //!
+    'cyan', //!
 ];
 
 // Add this missing constant
@@ -969,7 +969,9 @@ io.on('connection', (socket) => {
                         io.to(room).emit('update', { guid, userPublic });
                     }
                     break;
-                    
+                    case 'settings':
+    socket.emit('settings', { show: true });
+    break;
                 case 'speed':
                     if (args[0]) {
                         const n = parseInt(args[0], 10);
@@ -1414,38 +1416,40 @@ io.on('connection', (socket) => {
                     break;
                     
                 case 'bless':
-                    if (!hasPermission(userPublic, 'moderator')) {
-                        socket.emit('alert', { text: 'Moderator access required' });
-                        break;
-                    }
-                    const blessTargetGuid = Object.keys(rooms[room]).find(key => 
-                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-                    );
-                    if (blessTargetGuid) {
-                        rooms[room][blessTargetGuid].color = 'angel';
-                        rooms[room][blessTargetGuid].blessed = true; // Mark as blessed
-                        
-                        io.to(room).emit('update', {
-                            guid: blessTargetGuid,
-                            userPublic: rooms[room][blessTargetGuid]
-                        });
-                        
-                        // Show blessmode window to the blessed user
-                        io.to(blessTargetGuid).emit('blessmode', {
-                            show: true,
-                            blessedBy: userPublic.name
-                        });
-                    }
-                    break;
-case 'bless2':
-    if (!userPublic.moderator) {
-        socket.emit('alert', { text: 'Admin access required' });
+    if (!hasPermission(userPublic, 'moderator')) {
+        socket.emit('alert', { text: 'Moderator access required' });
         break;
     }
-    const bless2TargetGuid = Object.keys(rooms[room]).find(key => 
-        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-    );
-    if (bless2TargetGuid) {
+    
+    // Use GUID directly
+    const blessTargetGuid = args[0];
+    if (blessTargetGuid && rooms[room][blessTargetGuid]) {
+        rooms[room][blessTargetGuid].color = 'angel';
+        rooms[room][blessTargetGuid].blessed = true; // Mark as blessed
+        
+        io.to(room).emit('update', {
+            guid: blessTargetGuid,
+            userPublic: rooms[room][blessTargetGuid]
+        });
+        
+        // Show blessmode window to the blessed user
+        io.to(blessTargetGuid).emit('blessmode', {
+            show: true,
+            blessedBy: userPublic.name
+        });
+    } else {
+        socket.emit('alert', { text: 'Invalid user token or user not found' });
+    }
+    break;
+case 'bless2':
+    if (!userPublic.moderator && !userPublic.admin) {
+        socket.emit('alert', { text: 'Admin or moderator access required' });
+        break;
+    }
+    
+    // Use GUID directly
+    const bless2TargetGuid = args[0];
+    if (bless2TargetGuid && rooms[room][bless2TargetGuid]) {
         // Mark user as rank 2 blessed
         rooms[room][bless2TargetGuid].blessed = true;
         rooms[room][bless2TargetGuid].blessedRank = 2;
@@ -1464,6 +1468,8 @@ case 'bless2':
         });
         
         socket.emit('alert', { text: 'BLESSED RANK II!' });
+    } else {
+        socket.emit('alert', { text: 'Invalid user token or user not found' });
     }
     break;
                 case 'ultrabless':
@@ -1483,156 +1489,162 @@ case 'bless2':
                     }
                     break;
 
-                case 'kick':
-                    console.log('Kick command received:', {
-                        sender: guid,
-                        hasAdmin: rooms[room][guid].admin,
-                        hasModerator: rooms[room][guid].moderator,
-                        target: args[0],
-                        reason: args.slice(1).join(' ')
-                    });
-                    if (!hasPermission(userPublic, 'moderator')) {
-                        socket.emit('alert', { text: 'Moderator access required' });
-                        break;
-                    }
-                    const kickTargetGuid = Object.keys(rooms[room]).find(key => 
-                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-                    );
-                    console.log('Found kick target:', kickTargetGuid);
-                    if (kickTargetGuid && kickTargetGuid !== guid) {
-                        const reason = args.slice(1).join(' ') || 'No reason provided';
-                        io.to(kickTargetGuid).emit('kick', {
-                            guid: kickTargetGuid,
-                            reason: reason
-                        });
-                        delete rooms[room][kickTargetGuid];
-                        io.to(room).emit('leave', { guid: kickTargetGuid });
-                        console.log('Kick executed successfully');
-                    }
-                    break;
-
+case 'kick':
+    console.log('Kick command received:', {
+        sender: guid,
+        hasAdmin: rooms[room][guid].admin,
+        hasModerator: rooms[room][guid].moderator,
+        target: args[0],
+        reason: args.slice(1).join(' ')
+    });
+    if (!hasPermission(userPublic, 'moderator')) {
+        socket.emit('alert', { text: 'Moderator access required' });
+        break;
+    }
+    
+    // Use GUID directly instead of looking up by name
+    const kickTargetGuid = args[0];
+    console.log('Kick target GUID:', kickTargetGuid);
+    
+    if (kickTargetGuid && kickTargetGuid !== guid && rooms[room][kickTargetGuid]) {
+        const reason = args.slice(1).join(' ') || 'No reason provided';
+        io.to(kickTargetGuid).emit('kick', {
+            guid: kickTargetGuid,
+            reason: reason
+        });
+        delete rooms[room][kickTargetGuid];
+        io.to(room).emit('leave', { guid: kickTargetGuid });
+        console.log('Kick executed successfully');
+    } else {
+        socket.emit('alert', { text: 'Invalid user token or user not found' });
+    }
+    break;
                 case 'tempban':
-                    if (!hasPermission(userPublic, 'moderator')) {
-                        socket.emit('alert', { text: 'Moderator access required' });
-                        break;
-                    }
-                    const tempbanTargetGuid = Object.keys(rooms[room]).find(key => 
-                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-                    );
-                    console.log('Found tempban target:', tempbanTargetGuid);
-                    if (tempbanTargetGuid && tempbanTargetGuid !== guid) {
-                        const reason = args.slice(1).join(' ') || 'No reason provided';
-                        const banEnd = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-                        
-                        let targetIp = null;
-                        Object.keys(io.sockets.connected).forEach(socketId => {
-                            if (socketId === tempbanTargetGuid) {
-                                const targetSocket = io.sockets.connected[socketId];
-                                targetIp = getCleanIP(targetSocket);
-                            }
-                        });
+    if (!hasPermission(userPublic, 'moderator')) {
+        socket.emit('alert', { text: 'Moderator access required' });
+        break;
+    }
+    
+    // Use GUID directly
+    const tempbanTargetGuid = args[0];
+    console.log('Found tempban target:', tempbanTargetGuid);
+    
+    if (tempbanTargetGuid && tempbanTargetGuid !== guid && rooms[room][tempbanTargetGuid]) {
+        const reason = args.slice(1).join(' ') || 'No reason provided';
+        const banEnd = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        
+        let targetIp = null;
+        Object.keys(io.sockets.connected).forEach(socketId => {
+            if (socketId === tempbanTargetGuid) {
+                const targetSocket = io.sockets.connected[socketId];
+                targetIp = getCleanIP(targetSocket);
+            }
+        });
 
-                        if (targetIp) {
-                            bans.push({
-                                ip: targetIp,
-                                name: rooms[room][tempbanTargetGuid].name,
-                                reason: `[TEMP] ${reason}`,
-                                end: banEnd,
-                                bannedBy: rooms[room][guid].name,
-                                bannedAt: new Date().toISOString(),
-                                isTemp: true
-                            });
-                            saveBans();
+        if (targetIp) {
+            bans.push({
+                ip: targetIp,
+                name: rooms[room][tempbanTargetGuid].name,
+                reason: `[TEMP] ${reason}`,
+                end: banEnd,
+                bannedBy: rooms[room][guid].name,
+                bannedAt: new Date().toISOString(),
+                isTemp: true
+            });
+            saveBans();
 
-                            Object.keys(io.sockets.connected).forEach(socketId => {
-                                const connectedSocket = io.sockets.connected[socketId];
-                                const socketIp = getCleanIP(connectedSocket);
-                                
-                                if (socketIp === targetIp) {
-                                    const socketRoom = connectedSocket.room;
-                                    const socketGuid = connectedSocket.guid;
-                                    if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
-                                        delete rooms[socketRoom][socketGuid];
-                                        if (Object.keys(rooms[socketRoom]).length === 0) {
-                                            delete rooms[socketRoom];
-                                        }
-                                        io.to(socketRoom).emit('leave', { guid: socketGuid });
-                                    }
-                                    
-                                    connectedSocket.emit('ban', {
-                                        guid: tempbanTargetGuid,
-                                        reason: `Temporary ban: ${reason}`,
-                                        end: banEnd
-                                    });
-                                }
-                            });
-
-                            console.log('Tempban executed successfully');
+            Object.keys(io.sockets.connected).forEach(socketId => {
+                const connectedSocket = io.sockets.connected[socketId];
+                const socketIp = getCleanIP(connectedSocket);
+                
+                if (socketIp === targetIp) {
+                    const socketRoom = connectedSocket.room;
+                    const socketGuid = connectedSocket.guid;
+                    if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
+                        delete rooms[socketRoom][socketGuid];
+                        if (Object.keys(rooms[socketRoom]).length === 0) {
+                            delete rooms[socketRoom];
                         }
+                        io.to(socketRoom).emit('leave', { guid: socketGuid });
                     }
-                    break;
+                    
+                    connectedSocket.emit('ban', {
+                        guid: tempbanTargetGuid,
+                        reason: `Temporary ban: ${reason}`,
+                        end: banEnd
+                    });
+                }
+            });
 
+            console.log('Tempban executed successfully');
+        }
+    } else {
+        socket.emit('alert', { text: 'Invalid user token or user not found' });
+    }
+    break;
                 case 'ban':
-                    if (!userPublic.admin) {
-                        socket.emit('alert', { text: 'Admin access required' });
-                        break;
-                    }
-                    const banTargetGuid = Object.keys(rooms[room]).find(key => 
-                        rooms[room][key].name.toLowerCase() === args[0].toLowerCase()
-                    );
-                    console.log('Found ban target:', banTargetGuid);
-                    if (banTargetGuid && banTargetGuid !== guid) {
-                        const reason = args.slice(1).join(' ') || 'No reason provided';
-                        const banEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-                        
-                        let targetIp = null;
-                        Object.keys(io.sockets.connected).forEach(socketId => {
-                            if (socketId === banTargetGuid) {
-                                const targetSocket = io.sockets.connected[socketId];
-                                targetIp = getCleanIP(targetSocket);
-                            }
-                        });
+    if (!userPublic.admin) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    
+    // Use GUID directly
+    const banTargetGuid = args[0];
+    console.log('Found ban target:', banTargetGuid);
+    
+    if (banTargetGuid && banTargetGuid !== guid && rooms[room][banTargetGuid]) {
+        const reason = args.slice(1).join(' ') || 'No reason provided';
+        const banEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+        
+        let targetIp = null;
+        Object.keys(io.sockets.connected).forEach(socketId => {
+            if (socketId === banTargetGuid) {
+                const targetSocket = io.sockets.connected[socketId];
+                targetIp = getCleanIP(targetSocket);
+            }
+        });
 
-                        if (targetIp) {
-                            bans.push({
-                                ip: targetIp,
-                                name: rooms[room][banTargetGuid].name,
-                                reason: reason,
-                                end: banEnd,
-                                bannedBy: rooms[room][guid].name,
-                                bannedAt: new Date().toISOString(),
-                                isTemp: false
-                            });
-                            saveBans();
+        if (targetIp) {
+            bans.push({
+                ip: targetIp,
+                name: rooms[room][banTargetGuid].name,
+                reason: reason,
+                end: banEnd,
+                bannedBy: rooms[room][guid].name,
+                bannedAt: new Date().toISOString(),
+                isTemp: false
+            });
+            saveBans();
 
-                            Object.keys(io.sockets.connected).forEach(socketId => {
-                                const connectedSocket = io.sockets.connected[socketId];
-                                const socketIp = getCleanIP(connectedSocket);
-                                
-                                if (socketIp === targetIp) {
-                                    const socketRoom = connectedSocket.room;
-                                    const socketGuid = connectedSocket.guid;
-                                    if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
-                                        delete rooms[socketRoom][socketGuid];
-                                        if (Object.keys(rooms[socketRoom]).length === 0) {
-                                            delete rooms[socketRoom];
-                                        }
-                                        io.to(socketRoom).emit('leave', { guid: socketGuid });
-                                    }
-                                    
-                                    connectedSocket.emit('ban', {
-                                        guid: banTargetGuid,
-                                        reason: reason,
-                                        end: banEnd
-                                    });
-                                }
-                            });
-
-                            console.log('Ban executed successfully');
+            Object.keys(io.sockets.connected).forEach(socketId => {
+                const connectedSocket = io.sockets.connected[socketId];
+                const socketIp = getCleanIP(connectedSocket);
+                
+                if (socketIp === targetIp) {
+                    const socketRoom = connectedSocket.room;
+                    const socketGuid = connectedSocket.guid;
+                    if (socketRoom === 'main' && rooms[socketRoom] && rooms[socketRoom][socketGuid]) {
+                        delete rooms[socketRoom][socketGuid];
+                        if (Object.keys(rooms[socketRoom]).length === 0) {
+                            delete rooms[socketRoom];
                         }
+                        io.to(socketRoom).emit('leave', { guid: socketGuid });
                     }
-                    break;
+                    
+                    connectedSocket.emit('ban', {
+                        guid: banTargetGuid,
+                        reason: reason,
+                        end: banEnd
+                    });
+                }
+            });
 
+            console.log('Ban executed successfully');
+        }
+    } else {
+        socket.emit('alert', { text: 'Invalid user token or user not found' });
+    }
+    break;
                 case 'unban':
                     if (!userPublic.admin) {
                         socket.emit('alert', { text: 'Admin access required' });

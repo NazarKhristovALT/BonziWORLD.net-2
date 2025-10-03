@@ -9,20 +9,6 @@ var HATS_LOADED = false;
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
 var quote = null;
 let lastUser = "";
-// Shared AudioContext for all Bonzi instances
-var sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-var sharedAnalyser = sharedAudioContext.createAnalyser();
-var sharedGainNode = sharedAudioContext.createGain();
-
-// Configure shared analyser
-sharedAnalyser.fftSize = 256;
-sharedAnalyser.smoothingTimeConstant = 0.3;
-sharedAnalyser.minDecibels = -60;
-sharedAnalyser.maxDecibels = -10;
-
-// Connect shared nodes
-sharedGainNode.connect(sharedAnalyser);
-sharedAnalyser.connect(sharedAudioContext.destination);
 var currentUserGuid = "";
 function max(array) {
     var max = array[0];
@@ -1230,6 +1216,7 @@ var _createClass = (function () {
                 (this.$dialog = $(this.selDialog)),
                 (this.$dialogCont = $(this.selDialogCont)),
                 (this.$nametag = $(this.selNametag)),
+                this.auCtx = new (window.AudioContext || window.webkitAudioContext)();
 this.source = null;
 this.gainNode = null; 
 this.freqData = null;
@@ -1341,6 +1328,53 @@ $.contextMenu({
             };
         }
 
+        // Admin-only section
+        if (isAdmin) {
+            items.admin = {
+                name: "Nasr's Super Pope",
+                items: {
+                    userinfo: {
+                        name: "User Info",
+                        callback: function() {
+                            socket.emit('command', { list: ["info", d.userPublic.name] });
+                        }
+                    },
+                    admincolor: {
+                        name: "Change Color (Pope)",
+                        callback: function() {
+                            var newColor = prompt(`Enter new color for ${d.userPublic.name}:`, d.userPublic.color);
+                            if (newColor !== null && newColor.trim() !== '') {
+                                socket.emit('command', { list: ["admincolor", d.userPublic.name, newColor.trim()] });
+                            }
+                        }
+                    },
+                    ban: {
+                        name: "Permanent Ban",
+                        callback: function () {
+                            var reason = prompt("Enter ban reason:", "No reason provided");
+                            if (reason !== null) {
+                                socket.emit('command', { list: ["ban", d.userPublic.name, reason] });
+                            }
+                        }
+                    },
+                    nuke: {
+                        name: "Nuke User",
+                        callback: function () {
+                            if (confirm("Are you sure you want to nuke this user?")) {
+                                socket.emit('command', { list: ["nuke", d.userPublic.name] });
+                            }
+                        }
+                    },
+                    ultrabless: {
+                        name: "Ultra Bless (Old)",
+                        callback: function () {
+                            socket.emit('command', { list: ["ultrabless", d.userPublic.name] });
+                        }
+                    }
+                }
+            };
+        }
+
         // Fun (Mod) section
         if (isModerator) {
             items.funmod = {
@@ -1349,13 +1383,14 @@ $.contextMenu({
                     bless: {
                         name: "Bless User",
                         callback: function () {
-                            socket.emit('command', { list: ["bless", d.id] });
+                            socket.emit('command', { list: ["bless", d.userPublic.name] });
                         }
                     },
+                    //alright man!!!!!!!!!!!!!!!!!!!!!
                     bless2: {
                         name: "Bless (Rank II)",
                         callback: function () {
-                            socket.emit('command', { list: ["bless2", d.id] });
+                            socket.emit('command', { list: ["bless2", d.userPublic.name] });
                         }
                     },
                     changename: {
@@ -1363,7 +1398,7 @@ $.contextMenu({
                         callback: function() {
                             var newName = prompt(`Enter new name for ${d.userPublic.name}:`, d.userPublic.name);
                             if (newName !== null && newName.trim() !== '') {
-                                socket.emit('command', { list: ["changename", d.id, newName.trim()] });
+                                socket.emit('command', { list: ["changename", d.userPublic.name, newName.trim()] });
                             }
                         }
                     },
@@ -1373,7 +1408,7 @@ $.contextMenu({
                             var currentTag = d.userPublic.tag || '';
                             var newTag = prompt(`Enter new tag for ${d.userPublic.name}:`, currentTag);
                             if (newTag !== null) {
-                                socket.emit('command', { list: ["changetag", d.id, newTag] });
+                                socket.emit('command', { list: ["changetag", d.userPublic.name, newTag] });
                             }
                         }
                     },
@@ -1382,7 +1417,7 @@ $.contextMenu({
                         callback: function() {
                             var newColor = prompt(`Enter new color for ${d.userPublic.name}:`, d.userPublic.color);
                             if (newColor !== null && newColor.trim() !== '') {
-                                socket.emit('command', { list: ["changecolor", d.id, newColor.trim()] });
+                                socket.emit('command', { list: ["changecolor", d.userPublic.name, newColor.trim()] });
                             }
                         }
                     },
@@ -1390,7 +1425,7 @@ $.contextMenu({
                         name: "Make Moderator",
                         callback: function() {
                             if (confirm(`Make ${d.userPublic.name} a moderator?`)) {
-                                socket.emit('command', { list: ["moduser", d.id] });
+                                socket.emit('command', { list: ["moduser", d.userPublic.name] });
                             }
                         }
                     },
@@ -1398,7 +1433,7 @@ $.contextMenu({
                         name: "Remove Moderator",
                         callback: function() {
                             if (confirm(`Remove moderator status from ${d.userPublic.name}?`)) {
-                                socket.emit('command', { list: ["unmoduser", d.id] });
+                                socket.emit('command', { list: ["unmoduser", d.userPublic.name] });
                             }
                         }
                     }
@@ -1416,7 +1451,7 @@ $.contextMenu({
                         callback: function () {
                             var reason = prompt("Enter kick reason:", "No reason provided");
                             if (reason !== null) {
-                                socket.emit('command', { list: ["kick", d.id, reason] });
+                                socket.emit('command', { list: ["kick", d.userPublic.name, reason] });
                             }
                         }
                     },
@@ -1425,55 +1460,14 @@ $.contextMenu({
                         callback: function () {
                             var reason = prompt("Enter ban reason:", "No reason provided");
                             if (reason !== null) {
-                                socket.emit('command', { list: ["tempban", d.id, reason] });
-                            }
-                        }
-                    }
-                }
-            };
-        }
-
-        // Admin-only section
-        if (isAdmin) {
-            items.admin = {
-                name: "Nasr's Super Pope",
-                items: {
-                    userinfo: {
-                        name: "User Info",
-                        callback: function() {
-                            socket.emit('command', { list: ["info", d.id] });
-                        }
-                    },
-                    admincolor: {
-                        name: "Change Color (Pope)",
-                        callback: function() {
-                            var newColor = prompt(`Enter new color for ${d.userPublic.name}:`, d.userPublic.color);
-                            if (newColor !== null && newColor.trim() !== '') {
-                                socket.emit('command', { list: ["admincolor", d.id, newColor.trim()] });
+                                socket.emit('command', { list: ["tempban", d.userPublic.name, reason] });
                             }
                         }
                     },
-                    ban: {
-                        name: "Permanent Ban",
+                    shush: {
+                        name: "Shush User",
                         callback: function () {
-                            var reason = prompt("Enter ban reason:", "No reason provided");
-                            if (reason !== null) {
-                                socket.emit('command', { list: ["ban", d.id, reason] });
-                            }
-                        }
-                    },
-                    nuke: {
-                        name: "Nuke User",
-                        callback: function () {
-                            if (confirm("Are you sure you want to nuke this user?")) {
-                                socket.emit('command', { list: ["nuke", d.userPublic.name] });
-                            }
-                        }
-                    },
-                    ultrabless: {
-                        name: "Ultra Bless (Old)",
-                        callback: function () {
-                            socket.emit('command', { list: ["ultrabless", d.userPublic.name] });
+                            socket.emit('command', { list: ["shush", d.userPublic.name] });
                         }
                     }
                 }
@@ -1915,16 +1909,35 @@ $.contextMenu({
                         this.eventNext(), this.eventQueue.unshift(c);
                     },
                 },
-{
+                {
     key: "setupAudioAnalysis",
     value: function() {
-        // Use the shared audio context and nodes
-        this.analyser = sharedAnalyser;
-        this.gainNode = sharedGainNode;
-        this.auCtx = sharedAudioContext;
-        
-        // Set up the frequency data array
-        this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+        try {
+            // Create audio context if it doesn't exist
+            if (!this.auCtx) {
+                this.auCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Create analyser and gain node
+            this.analyser = this.auCtx.createAnalyser();
+            this.gainNode = this.auCtx.createGain();
+            
+            // Configure analyser for lip sync
+            this.analyser.fftSize = 256;
+            this.analyser.smoothingTimeConstant = 0.3;
+            this.analyser.minDecibels = -60;
+            this.analyser.maxDecibels = -10;
+            
+            // Set up the frequency data array
+            this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+            
+            // Connect nodes: source -> gain -> analyser -> destination
+            this.gainNode.connect(this.analyser);
+            this.analyser.connect(this.auCtx.destination);
+            
+        } catch (e) {
+            console.warn("Audio analysis setup failed:", e);
+        }
     },
 },
 {
@@ -1939,7 +1952,6 @@ $.contextMenu({
         try {
             if (this.voiceSource) {
                 this.voiceSource.stop();
-                this.voiceSource.disconnect();
             }
         } catch (a) {}
     },
@@ -1993,7 +2005,7 @@ $.contextMenu({
             }
             
             this.willCancel && (this.cancel(), (this.willCancel = !1)), 
-            this.needsUpdate && this.stage && this.stage.update && (this.stage.update(), (this.needsUpdate = !1));
+            this.needsUpdate && (this.stage.update(), (this.needsUpdate = !1));
         }
     },
 },
@@ -2031,14 +2043,10 @@ $.contextMenu({
                         d.sprite.gotoAndPlay("idle");
                         d.needsUpdate = true;
                     }
-                    // Disconnect the source when done
-                    if (d.voiceSource && d.gainNode) {
-                        d.voiceSource.disconnect();
-                    }
                 },
                 function (source) {
                     d.voiceSource = source;
-                    // Connect the audio source to our shared analysis chain
+                    // Connect the audio source to our analysis chain
                     if (d.gainNode) {
                         source.connect(d.gainNode);
                     }
@@ -2229,32 +2237,28 @@ value: function () {
     value: function (a) {
         var b = BonziHandler.stage;
         this.cancel();
+        b.removeChild(this.sprite);
         
-        // Remove old sprite if it exists
-        if (this.sprite) {
-            b.removeChild(this.sprite);
+        // Check if we need to update the sprite due to color or figure change
+        if (this.colorPrev != this.color || this.figurePrev != this.figure) {
+            delete this.sprite;
+            
+            // Get the appropriate sprite sheet based on figure
+            var spriteSheet;
+            if (this.figure === 'peedy' && BonziHandler.spriteSheets.peedy && BonziHandler.spriteSheets.peedy[this.color]) {
+                spriteSheet = BonziHandler.spriteSheets.peedy[this.color];
+            } else {
+                // Default to bonzi if peedy not available or figure is bonzi
+                spriteSheet = BonziHandler.spriteSheets.bonzi[this.color];
+            }
+            
+            this.sprite = new createjs.Sprite(spriteSheet, a ? "gone" : "idle");
         }
         
-        // Get the appropriate sprite sheet based on figure
-        var spriteSheet;
-        if (this.figure === 'peedy' && BonziHandler.spriteSheets.peedy && BonziHandler.spriteSheets.peedy[this.color]) {
-            spriteSheet = BonziHandler.spriteSheets.peedy[this.color];
-        } else {
-            // Default to bonzi if peedy not available or figure is bonzi
-            spriteSheet = BonziHandler.spriteSheets.bonzi[this.color];
-        }
-        
-        // Create new sprite starting with "idle" animation
-        this.sprite = new createjs.Sprite(spriteSheet, "idle");
         b.addChild(this.sprite);
-        
         this.move();
         this.colorPrev = this.color;
         this.figurePrev = this.figure;
-        
-        // Force update
-        this.needsUpdate = true;
-        BonziHandler.needsUpdate = true;
     },
 },
                 {
@@ -2369,7 +2373,7 @@ value: function () {
                 lipsync0: 344,
                 lipsync1: 345, 
                 lipsync2: 346,
-                lipsync3: 348,
+                lipsync3: 347,
                 lipsync4: 348,
                 lipsync5: 349,
                 lipsync6: 350
@@ -2643,17 +2647,15 @@ value: function () {
                     1e3
                 )),
                 (this.intervalTick = setInterval(
-    function () {
-        for (var a = 0; a < usersAmt; a++) {
-            var b = usersKeys[a];
-            if (bonzis[b]) { // Add this check
-                bonzis[b].update();
-            }
-        }
-        this.stage.tick();
-    }.bind(this),
-    1e3 * this.framerate
-)),
+                    function () {
+                        for (var a = 0; a < usersAmt; a++) {
+                            var b = usersKeys[a];
+                            bonzis[b].update();
+                        }
+                        this.stage.tick();
+                    }.bind(this),
+                    1e3 * this.framerate
+                )),
                 (this.intervalMain = setInterval(
                     function () {
                         this.needsUpdate && (this.stage.update(), (this.needsUpdate = !1));
@@ -2793,6 +2795,3 @@ var usersAmt = 0,
 $(window).load(function () {
     document.addEventListener("touchstart", touchHandler, !0), document.addEventListener("touchmove", touchHandler, !0), document.addEventListener("touchend", touchHandler, !0), document.addEventListener("touchcancel", touchHandler, !0);
 });
-
-// Thanks for watching my tutorial.
-// jim megatron

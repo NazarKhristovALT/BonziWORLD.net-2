@@ -939,7 +939,6 @@ hr {
     padding: 4px;
     gap: 4px;
 }
-
 .card, .cardhat {
     width: 75px;
     height: 100px;
@@ -1026,4 +1025,30 @@ hr {
 
 .window_close2:active {
     background-position-y: -42px;
+}
+
+
+.color-option:hover, .hat-option:hover {
+    background-color: #e6f3ff;
+}
+
+
+/* Settings checkbox styles */
+#settings_window input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+#settings_window label {
+    cursor: pointer;
+    user-select: none;
+}
+
+#settings_window button {
+    transition: background-color 0.2s ease;
+}
+
+#settings_window button:hover {
+    background-color: #5a2d9c !important;
 }
