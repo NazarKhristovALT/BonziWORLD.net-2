@@ -70,5 +70,18 @@
             <b>BonziSHOP is<br>Under Construct</b>
         </div>
     </div>
+
+    <script>
+      // Create an audio object and try to play it
+      const bgMusic = new Audio('./music/dsimenu.mp3'); // put your audio file path here
+      bgMusic.loop = true;
+
+      bgMusic.play().catch(() => {
+        // if browser blocks autoplay, start it after first click
+        document.body.addEventListener('click', () => {
+          bgMusic.play();
+        }, { once: true });
+      });
+    </script>
 </body>
 </html>
