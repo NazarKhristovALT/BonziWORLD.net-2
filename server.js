@@ -38,7 +38,7 @@ const ALLOWED_HATS = [
     "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "kfc", "bfdi", "bieber", 
     "bowtie", "bucket", "chain", "chef", "clippy", "cowboy", "elon", "evil", 
     "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", "cape",
-    "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "plauge", "sponge", "cobby", "gun", "patrick"
+    "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "plauge", "sponge", "cobby", "gun", "patrick","squiddy","mrkrabs","3dglasses","beard"
 ];
 
 const BLESSED_HATS = [
