@@ -37,7 +37,7 @@ const ALLOWED_HATS = [
     "demonmask", "shirt", "tinymario", "cap", "palestine", "hiimstickman", 
     "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "kfc", "bfdi", "bieber", 
     "bowtie", "bucket", "chain", "chef", "clippy", "cowboy", "elon", "evil", 
-    "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", 
+    "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", "cape",
     "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "plauge", "sponge", "cobby", "gun", "patrick"
 ];
 
@@ -68,8 +68,8 @@ const MODERATOR_USERS = [
 
 // Rate limiting configuration (only for messages)
 const RATE_LIMIT = {
-    interval: 60000, // 1 minute in milliseconds
-    messages: 10     // Max messages per interval
+    interval: 1000, // 1 minute in milliseconds
+    messages: 3     // Max messages per interval
 };
 
 // Command timeout configuration
