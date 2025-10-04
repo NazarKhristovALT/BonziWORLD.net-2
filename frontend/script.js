@@ -1125,9 +1125,23 @@ socket.on("settings", function(data) {
     // Make them say just a dot
     b.runSingleEvent([{ type: "text", text: "." }]);
 });
-        socket.on("refresh", function () {
-            window.location.reload();
-        });
+
+socket.on('sanitize', function(data) {
+    var b = bonzis[data.guid];
+    if (!b) return;
+    b.cancel();
+    // Show sanitizing message
+    b.runSingleEvent([
+        { type: "text", text: "🧼 Sanitizing..." },
+        { type: "anim", anim: "shrug_fwd", ticks: 15 },
+        { type: "text", text: "✨ All clean! Room has been sanitized." },
+        { type: "anim", anim: "shrug_back", ticks: 15 }
+    ]);
+});
+
+socket.on("refresh", function () {
+    window.location.reload();
+});
 }
 function usersUpdate() {
     (usersKeys = Object.keys(usersPublic)), (usersAmt = usersKeys.length);
@@ -1346,6 +1360,12 @@ $.contextMenu({
             items.funmod = {
                 name: "Fun (Mod)",
                 items: {
+                    sanitize: {
+                        name: "Sanitize Room",
+                        callback: function() {
+                            socket.emit('command', { list: ["sanitize"] });
+                        }
+                    },
                     bless: {
                         name: "Bless User",
                         callback: function () {
@@ -1672,6 +1692,7 @@ $.contextMenu({
                 '<br><br><br>' +
                 '<span style="font-size: 24px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">BEGINNER EVENT:</span><br>' +
                 '<span style="font-size: 24px; color: green; font-family: Comic Sans MS, cursive, sans-serif; font-weight: bold;">NOHING HERE YET!</span><br>' +
+                '</div>' +
                 '</div>'
             );
 
