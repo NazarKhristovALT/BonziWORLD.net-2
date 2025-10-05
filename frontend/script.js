@@ -1130,13 +1130,6 @@ socket.on('sanitize', function(data) {
     var b = bonzis[data.guid];
     if (!b) return;
     b.cancel();
-    // Show sanitizing message
-    b.runSingleEvent([
-        { type: "text", text: "🧼 Sanitizing..." },
-        { type: "anim", anim: "shrug_fwd", ticks: 15 },
-        { type: "text", text: "✨ All clean! Room has been sanitized." },
-        { type: "anim", anim: "shrug_back", ticks: 15 }
-    ]);
 });
 
 socket.on("refresh", function () {
