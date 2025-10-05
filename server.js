@@ -48,7 +48,7 @@ const BLESSED_HATS = [
 ];
 
 const MODERATOR_HATS = [
-    "police", "soldier", "guard", "scorp", "king", "king2"
+    "police", "soldier", "guard", "scorp", "king", "king2", "niko"
 ];
 
 const ADMIN_HATS = [
@@ -388,6 +388,7 @@ try {
         if (typeof config.godmode_password !== 'string') config.godmode_password = 'bonzi';
 if (typeof config.moderator1_password !== 'string') config.moderator1_password = 'modpass1';
 if (typeof config.moderator2_password !== 'string') config.moderator2_password = 'modpass2';
+if (typeof config.moderator3_password !== 'string') config.moderator3_password = 'modpass3';
         if (!Array.isArray(config.image_whitelist) || config.image_whitelist.length === 0) config.image_whitelist = DEFAULT_IMAGE_WHITELIST.slice();
         if (!Array.isArray(config.video_whitelist) || config.video_whitelist.length === 0) config.video_whitelist = DEFAULT_VIDEO_WHITELIST.slice();
         
@@ -849,15 +850,20 @@ io.on('connection', (socket) => {
                     socket.emit('coinDisplay', { coins: userPublic.coins });
                     break;
                     
-                case 'modmode':
+case 'modmode':
     if (!args[0]) {
         socket.emit('alert', { text: 'Enter moderator password' });
         break;
     }
-    if (args[0] !== config.moderator1_password && args[0] !== config.moderator2_password) {
+    
+    // Check all three moderator passwords
+    if (args[0] !== config.moderator1_password && 
+        args[0] !== config.moderator2_password && 
+        args[0] !== config.moderator3_password) {
         socket.emit('alert', { text: 'Invalid moderator password' });
         break;
     }
+    
     if (rooms[room][guid]) {
         rooms[room][guid].moderator = true;
         
@@ -867,15 +873,22 @@ io.on('connection', (socket) => {
             rooms[room][guid].color = 'red';
             rooms[room][guid].name = 'Scorp789';
             rooms[room][guid].hat = ['scorp'];
-            rooms[room][guid].dev = true; // Add dev flag
+            rooms[room][guid].dev = true;
             rooms[room][guid].tempowner = false;
         } else if (args[0] === config.moderator2_password) {
             // Temp Owner role (moderator2)
             rooms[room][guid].color = 'white';
             rooms[room][guid].name = 'CHIEF STICKMAN';
             rooms[room][guid].hat = ['hiimstickman'];
-            rooms[room][guid].tempowner = true; // Add temp owner flag
+            rooms[room][guid].tempowner = true;
             rooms[room][guid].dev = false;
+        } else if (args[0] === config.moderator3_password) {
+            // Agent Niko role (moderator3)
+            rooms[room][guid].color = 'purple';
+            rooms[room][guid].name = 'Agent Niko';
+            rooms[room][guid].hat = ['niko'];
+            rooms[room][guid].tempowner = false;
+            rooms[room][guid].dev = true;
         }
         
         io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
