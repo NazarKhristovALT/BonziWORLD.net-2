@@ -350,6 +350,7 @@ function clamp(num, min, max) {
 // Default media whitelists
 const DEFAULT_IMAGE_WHITELIST = [
     'files.catbox.moe',
+    'bonziupload.l5.ca',
     'litter.catbox.moe',
     'web.archive.org',
     'i.ibb.co',
@@ -358,6 +359,7 @@ const DEFAULT_IMAGE_WHITELIST = [
 ];
 const DEFAULT_VIDEO_WHITELIST = [
     'files.catbox.moe',
+    'bonziupload.l5.ca',
     'i.ibb.co',
     'web.archive.org',
     'media.tenor.com',
