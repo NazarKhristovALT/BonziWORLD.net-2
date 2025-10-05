@@ -437,7 +437,7 @@ body.vaporwave #chat_send {
   color: #444;
   padding: 12px;
   bottom: 24%;
-  width: auto;
+  width: 300px;
   transform: translateX(-50%);
   -webkit-transform: translateX(-50%);
   text-align: center;
