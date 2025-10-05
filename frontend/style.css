@@ -398,6 +398,16 @@ body.vaporwave #chat_send {
   min-height: 200px;
   cursor: pointer;
 }
+#login_upload {
+  justify-content: center;
+  background-image: url("../img/app/bupload.png");
+  background-repeat: no-repeat;
+  background-position: center calc(5% + 1px);
+  background-size: auto;
+  padding: 31px;
+  min-height: 200px;
+  cursor: pointer;
+}
 /* Make the link container proper size */
 #login_apps + a {
   display: block;

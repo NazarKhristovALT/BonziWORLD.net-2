@@ -6,22 +6,23 @@ var admin = false;
 var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
 var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 const ALLOWED_HATS = [
-    "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police", 
+    "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police",
     "demonmask", "shirt", "tinymario", "cap", "palestine", "hiimstickman", 
     "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "kfc", "bfdi", "bieber", 
     "bowtie", "bucket", "chain", "chef", "clippy", "cowboy", "elon", "evil", 
     "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", "cape",
-    "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "plauge", "sponge", "cobby", "gun", "patrick","squiddy","mrkrabs","3dglasses","beard"
+    "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick"
 ];
 
 const BLESSED_HATS = [
     "premium", "scorp", "dank", "cake", "cigar", "gangster", "illuminati", "propeller", "gamer",
     "windows2", "windows3", "windows4", "windows5", "windows6", "windows7", "windows8", 
-    "windows9", "windows10", "windows11", "illuminati2", "windows12", "mario2", "luigi", "megatron"
+    "windows9", "windows10", "windows11", "illuminati2", "windows12", "mario2", "luigi", "megatron",
+"soldier", "guard", "scorp", "king", "king2", "niko"
 ];
 
 const MODERATOR_HATS = [
-    "police", "soldier", "guard", "scorp", "king", "king2", "niko"
+    "police"
 ];
 var HATS_LOADED = false; 
 var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
@@ -1517,6 +1518,10 @@ $.contextMenu({
 });
                 (this.needsUpdate = !1),
                 this.runSingleEvent([{ type: "anim", anim: "surf_intro", ticks: 30 }]);
+
+setTimeout(() => {
+  new Audio("https://files.catbox.moe/uxdvuz.wav").play();
+}, 1500);
         }
         return (
             _createClass(a, [
@@ -2094,6 +2099,9 @@ $.contextMenu({
                     key: "exit",
                     value: function (a) {
                         this.runSingleEvent([{ type: "anim", anim: "surf_away", ticks: 30 }]), setTimeout(a, 2e3);
+setTimeout(() => {
+  new Audio("https://files.catbox.moe/otlcp8.wav").play();
+}, 300);
                     },
                 },
                 {
