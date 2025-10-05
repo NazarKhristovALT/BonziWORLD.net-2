@@ -11,7 +11,8 @@ const ALLOWED_HATS = [
     "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "kfc", "bfdi", "bieber", 
     "bowtie", "bucket", "chain", "chef", "clippy", "cowboy", "elon", "evil", 
     "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", "cape",
-    "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick"
+    "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "squiddy", "3dglasses", "beard", 
+    "mrkrabs", "gromit"
 ];
 
 const BLESSED_HATS = [
@@ -769,8 +770,7 @@ function showAnnouncementModal(data){
     // Draggable behavior (drag by header)
     (function(){
         var dragging = false;
-        var startX = 0, startY = 0;
-        var startLeft = 0, startTop = 0;
+        var startX = 0, startY = 0, initialX = 0, initialY = 0;
 
         function pxToNum(v){ return Number((v||"0").toString().replace("px","")) || 0; }
 
@@ -1096,7 +1096,7 @@ socket.on("settings", function(data) {
             if (!b) return;
             b.cancel();
             b.showPoll(a.pollId, a.question, a.yes, a.no);
-        }),
+        });
         socket.on("poll_update", function(a){
             // update any bonzi displaying this poll
             for (var k in bonzis) {
