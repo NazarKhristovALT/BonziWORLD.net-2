@@ -1999,7 +1999,8 @@ setTimeout(() => {
             }
             
             // Lip sync analysis - only when speaking
-            if (this.goingToSpeak && this.analyser && this.source) {
+            // ADD NULL CHECK HERE:
+            if (this.goingToSpeak && this.analyser && this.source !== null) {
                 this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
                 this.analyser.getByteFrequencyData(this.freqData);
                 
