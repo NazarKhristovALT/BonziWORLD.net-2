@@ -1225,6 +1225,7 @@ var _createClass = (function () {
                 (this.event = null),
                 (this.willCancel = !1),
                 (this.run = !0),
+                (this.source = null),
                 (this.mute = !1),
                 (this.eventTypeToFunc = { anim: "updateAnim", html: "updateText", text: "updateText", idle: "updateIdle", add_random: "updateRandom" }),
                 "undefined" == typeof b ? (this.id = s4() + s4()) : (this.id = b),
@@ -1962,6 +1963,9 @@ setTimeout(() => {
         
         // Set up the frequency data array
         this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+        
+        // Initialize source to null
+        this.source = null;
     },
 },
 {
