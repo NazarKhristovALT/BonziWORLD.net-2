@@ -1209,26 +1209,28 @@ var _createClass = (function () {
         };
     })(),
     Bonzi = (function () {
-        function a(b, c) {
-            var d = this;
-            _classCallCheck(this, a),
-                (this.userPublic = c || { name: "BonziBUDDY", color: "purple", speed: 175, pitch: 50, voice: "en-us", figure: 'bonzi' }),
-                (this.color = this.userPublic.color),
-                (this.figure = this.userPublic.figure || 'bonzi')
-                
-                this.colorPrev,
-                (this.data = window.BonziData),
-                (this.drag = !1),
-                (this.dragged = !1),
-                (this.eventQueue = []),
-                (this.eventRun = !0),
-                (this.event = null),
-                (this.willCancel = !1),
-                (this.run = !0),
-                (this.source = null),
-                (this.mute = !1),
-                (this.eventTypeToFunc = { anim: "updateAnim", html: "updateText", text: "updateText", idle: "updateIdle", add_random: "updateRandom" }),
-                "undefined" == typeof b ? (this.id = s4() + s4()) : (this.id = b),
+function a(b, c) {
+    var d = this;
+    _classCallCheck(this, a),
+        (this.userPublic = c || { name: "BonziBUDDY", color: "purple", speed: 175, pitch: 50, voice: "en-us", figure: 'bonzi' }),
+        (this.color = this.userPublic.color),
+        (this.figure = this.userPublic.figure || 'bonzi'),
+        this.colorPrev,
+        (this.data = window.BonziData),
+        (this.drag = !1),
+        (this.dragged = !1),
+        (this.eventQueue = []),
+        (this.eventRun = !0),
+        (this.event = null),
+        (this.willCancel = !1),
+        (this.run = !0),
+        (this.mute = !1),
+        (this.eventTypeToFunc = { anim: "updateAnim", html: "updateText", text: "updateText", idle: "updateIdle", add_random: "updateRandom" }),
+        
+        // ADD THIS LINE - Initialize source property
+        (this.source = null),
+        
+        "undefined" == typeof b ? (this.id = s4() + s4()) : (this.id = b),
                 (this.rng = new Math.seedrandom(this.seed || this.id || Math.random())),
                 (this.selContainer = "#content"),
                 (this.$container = $(this.selContainer)),
@@ -2002,9 +2004,8 @@ setTimeout(() => {
                 }
             }
             
-            // Lip sync analysis - only when speaking
-            // ADD NULL CHECK HERE:
-            if (this.goingToSpeak && this.analyser && this.source !== null) {
+            // FIX THIS LINE - Add null check for this.source
+            if (this.goingToSpeak && this.analyser && this.source) {
                 this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
                 this.analyser.getByteFrequencyData(this.freqData);
                 
