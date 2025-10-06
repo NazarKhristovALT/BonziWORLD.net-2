@@ -400,7 +400,7 @@ body.vaporwave #chat_send {
 }
 #login_upload {
   justify-content: center;
-  background-image: url("../img/app/bupload.png");
+  background-image: url("https://files.catbox.moe/c3gasi.png");
   background-repeat: no-repeat;
   background-position: center calc(5% + 1px);
   background-size: auto;
@@ -437,7 +437,7 @@ body.vaporwave #chat_send {
   color: #444;
   padding: 12px;
   bottom: 24%;
-  width: 300px;
+  width: auto;
   transform: translateX(-50%);
   -webkit-transform: translateX(-50%);
   text-align: center;
