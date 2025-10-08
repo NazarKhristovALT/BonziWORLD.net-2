@@ -44,11 +44,18 @@ const shows = [
 ];
 
 const idents = [
-  // Select just 1 ident to use
-  "1KFVDDEaIEo"
+  // All idents available
+  "1KFVDDEaIEo", "_TOKdk36iVM", "_Fp0NbYHt1A", "Uyw-bne3G2A", 
+  "ZZz3A6H4f-E", "i0xpDILkXG8", "7SI8r5qRB8g", "3rvFiHa6rJk",
+  "9943uVZ-eL4", "_UEaBbz-gV0", "hQl3TVA_LR0", "s9EpQMnf1cI", 
+  "rXB2vDBIGEo", "yBCx1_OspaY", "SlLkV8Clewk", "AOFK_fTqGsI", 
+  "fx7jgI9-QEM", "CQ-0iBtZ4P4"
 ];
 
-let currentIdent = idents[0]; // Always use the same ident
+// Choose which ident to use (change this index to use a different ident)
+const currentIdentIndex = 0; // 0 = first ident, 1 = second ident, etc.
+let currentIdent = idents[currentIdentIndex];
+let shouldPlayIdentNext = true; // Track when to play ident
 
 function onYouTubeIframeAPIReady() {
   createPlayer(introVideo);
@@ -85,10 +92,19 @@ function onPlayerReady(event) {
 // Force video to keep playing
 function onPlayerStateChange(event) {
   if (event.data === YT.PlayerState.ENDED) {
-    // After any video ends, play the ident first
-    setTimeout(() => {
-      player.loadVideoById(currentIdent);
-    }, 100);
+    if (shouldPlayIdentNext) {
+      // Play ident after show
+      setTimeout(() => {
+        player.loadVideoById(currentIdent);
+        shouldPlayIdentNext = false;
+      }, 100);
+    } else {
+      // Play random show after ident
+      setTimeout(() => {
+        playRandomShow();
+        shouldPlayIdentNext = true;
+      }, 100);
+    }
   }
   if (event.data === YT.PlayerState.PAUSED) {
     player.playVideo();
@@ -105,9 +121,11 @@ function onPlayerError(event) {
   if (player.getVideoData().video_id === currentIdent) {
     // If ident fails, go straight to a show
     playRandomShow();
+    shouldPlayIdentNext = true;
   } else {
     // If show fails, play the ident
     player.loadVideoById(currentIdent);
+    shouldPlayIdentNext = false;
   }
 }
 
@@ -137,15 +155,6 @@ function disableInteraction() {
     if (blockedKeys.includes(e.key)) e.preventDefault();
   });
 }
-
-// Override the playRandomVideo function to handle the ident->show transition
-const originalPlayRandomVideo = window.playRandomVideo;
-window.playRandomVideo = function() {
-  // When ident ends, play a random show
-  if (player && player.getVideoData().video_id === currentIdent) {
-    playRandomShow();
-  }
-};
 </script>
 
 <script src="https://www.youtube.com/iframe_api"></script>
