@@ -1588,17 +1588,6 @@ setTimeout(() => {
                     );
                     hatsLoaded++;
                     
-                    // Show the hat container if this is the first hat to load
-                    if (hatsLoaded === 1) {
-                        self.$hat.show();
-                    }
-                });
-            }
-        });
-        
-            }
-        });
-        
         // Show the hat container if any hats were already loaded
         if (hatsLoaded > 0) {
             this.$hat.show();
