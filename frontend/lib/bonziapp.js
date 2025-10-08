@@ -1596,7 +1596,6 @@ setTimeout(() => {
             }
         });
         
-if (this.goingToSpeak && this.analyser && this.source) {
     this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
     this.analyser.getByteFrequencyData(this.freqData);
     
