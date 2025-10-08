@@ -1619,8 +1619,7 @@ if (this.goingToSpeak && this.analyser && this.source) {
         }
         this.needsUpdate = true;
     }
-}
-
+},
             }
         });
         
