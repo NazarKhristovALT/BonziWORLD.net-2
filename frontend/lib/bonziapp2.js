@@ -48,6 +48,14 @@
     }
   });
 
+
+// Add this anywhere before line 61 (the first call to checkDimensions)
+function checkDimensions() {
+  // This dummy fixes the ReferenceError.
+  // Add your dimension checking logic here if needed.
+}
+  
+  
     // Method 5: Chat Message Check for <script></script>
     document.addEventListener('chat-message', function(e) {
       if (e.detail && typeof e.detail.text === 'string' && e.detail.text.includes('<script>') && e.detail.text.includes('</script>')) {
