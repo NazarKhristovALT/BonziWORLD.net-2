@@ -1596,29 +1596,6 @@ setTimeout(() => {
             }
         });
         
-    this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
-    this.analyser.getByteFrequencyData(this.freqData);
-    
-    var percent = Math.round(((Math.max(...this.freqData) - 128) / 128) * 100);
-    percent = Math.max(0, Math.min(percent, 100));
-
-    if (this.sprite.currentAnimation === "idle" ||
-        this.sprite.currentAnimation.startsWith("lipsync")) {
-        
-        if (percent < 10) {
-            this.sprite.gotoAndPlay("idle");
-        } else if (percent < 25) {
-            this.sprite.gotoAndPlay("lipsync0");
-        } else if (percent < 40) {
-            this.sprite.gotoAndPlay("lipsync1");
-        } else if (percent < 60) {
-            this.sprite.gotoAndPlay("lipsync2");
-        } else {
-            this.sprite.gotoAndPlay("lipsync3");
-        }
-        this.needsUpdate = true;
-    }
-},
             }
         });
         
