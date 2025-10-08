@@ -1602,7 +1602,7 @@ setTimeout(() => {
         }
     }
 },
-                    if (this.source && this.analyser) {
+                     (this.source && this.analyser) {
         this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(this.freqData);
         
