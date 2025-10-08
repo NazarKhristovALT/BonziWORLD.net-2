@@ -1593,6 +1593,15 @@ setTimeout(() => {
                         self.$hat.show();
                     }
                 });
+            }
+        });
+        
+        // Show the hat container if any hats were already loaded
+        if (hatsLoaded > 0) {
+            this.$hat.show();
+        }
+    }
+},
                     if (this.source && this.analyser) {
         this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(this.freqData);
