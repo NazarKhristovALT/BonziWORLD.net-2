@@ -1587,8 +1587,11 @@ setTimeout(() => {
                         '"></div>'
                     );
                     hatsLoaded++;
-                    
-        // Show the hat container if any hats were already loaded
+                });
+            }
+        });
+        
+        // Show the hat container if any hats were loaded
         if (hatsLoaded > 0) {
             this.$hat.show();
         }
