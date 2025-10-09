@@ -1021,7 +1021,48 @@ socket.on("shop", function(data) {
         b.debugShop();
     }
 });
-
+socket.on("tv", function(data) {
+    if (data.enabled) {
+        // Create TV background
+        const tvOverlay = document.createElement('div');
+        tvOverlay.id = 'tv_mode';
+        tvOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: -1;
+            pointer-events: none;
+        `;
+        document.body.appendChild(tvOverlay);
+        
+        // Add some TV-like scan lines effect
+        tvOverlay.style.background = `
+            repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1) 0px,
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            ),
+            #000
+        `;
+        
+        // Optional: Add a subtle noise texture
+        tvOverlay.style.backgroundImage = `
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")
+        `;
+        
+    } else {
+        // Remove TV background
+        const tvOverlay = document.getElementById('tv_mode');
+        if (tvOverlay) {
+            tvOverlay.remove();
+        }
+    }
+});
 socket.on("event", function(data) {
     var b = bonzis[data.guid];
     if (b && data.guid === currentUserGuid) { // Only show to the user who requested it
