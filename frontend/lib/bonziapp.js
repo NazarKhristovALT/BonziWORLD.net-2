@@ -1063,6 +1063,9 @@ socket.on("tv", function(data) {
         }
     }
 });
+    socket.on("sanitize", function(data) {
+    window.sanitizeMode = data.enabled;
+});
 socket.on("event", function(data) {
     var b = bonzis[data.guid];
     if (b && data.guid === currentUserGuid) { // Only show to the user who requested it
