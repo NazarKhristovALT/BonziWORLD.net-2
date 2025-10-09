@@ -921,13 +921,13 @@ case 'modmode':
                     break;
 
 
-                    case 'sanitize':
+case 'sanitize':
     if (!hasPermission(userPublic, 'moderator')) {
         socket.emit('alert', { text: 'Moderator access required' });
         break;
     }
     
-    // Toggle sanitize mode for the user
+    // Toggle sanitize mode
     userPublic.sanitizeMode = !userPublic.sanitizeMode;
     
     socket.emit('sanitize', { 
