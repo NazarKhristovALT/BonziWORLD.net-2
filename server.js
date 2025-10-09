@@ -919,6 +919,21 @@ case 'modmode':
                     userPublic.hat = ["mario"];
                     io.to(room).emit('update', { guid, userPublic });
                     break;
+
+
+                    case 'sanitize':
+    if (!hasPermission(userPublic, 'moderator')) {
+        socket.emit('alert', { text: 'Moderator access required' });
+        break;
+    }
+    
+    // Toggle sanitize mode for the user
+    userPublic.sanitizeMode = !userPublic.sanitizeMode;
+    
+    socket.emit('sanitize', { 
+        enabled: userPublic.sanitizeMode
+    });
+    break;
                     
                 case 'hat':
                     if (args.length > 0) {
