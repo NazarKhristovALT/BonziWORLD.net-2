@@ -1051,7 +1051,23 @@ case 'modmode':
                     io.to(room).emit('video', { guid, url });
                     break;
                 }
-                
+
+               case 'tv':
+    if (!hasPermission(userPublic, 'moderator')) {
+        socket.emit('alert', { text: 'Moderator access required' });
+        break;
+    }
+    
+    // Toggle TV mode for everyone in the room
+    const tvEnabled = !rooms[room].tvMode;
+    rooms[room].tvMode = tvEnabled;
+    
+    io.to(room).emit('tv', { 
+        enabled: tvEnabled,
+        activatedBy: userPublic.name
+    });
+    break;
+                    
                 case 'tag':
                     if (args.length > 0) {
                         const newTag = sanitizeInput(args.join(' ').substring(0, 20));
