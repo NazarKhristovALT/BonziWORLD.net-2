@@ -976,6 +976,13 @@ socket.on("userInfo", function(data) {
 socket.on("coinNotification", function(data) {
     showCoinNotification(data);
 });
+    socket.on("rainbow", function (data) {
+    var b = bonzis[data.guid];
+    if (!b) return;
+    
+    // Toggle rainbow effect
+    b.rainbow();
+});
 socket.on("updateAll", function (a) {
     $("#page_login").hide(), 
     (usersPublic = a.usersPublic), 
@@ -1714,6 +1721,57 @@ setTimeout(() => {
         }
     }
 },
+{
+    key: "rainbow",
+    value: function() {
+        var self = this;
+        
+        // If rainbow is active, remove it
+        if (this.rainbowInterval) {
+            // Clear the animation interval
+            clearInterval(this.rainbowInterval);
+            this.rainbowInterval = null;
+            
+            // Remove the filter
+            if (this.sprite) {
+                this.sprite.filters = null;
+                this.sprite.uncache();
+                this.needsUpdate = true;
+                BonziHandler.needsUpdate = true;
+            }
+            
+            this.rainbowFilter = null;
+            this.rainbowHue = 0;
+        } else {
+            // Create a rainbow filter using hue rotation
+            this.rainbowFilter = new createjs.ColorMatrixFilter();
+            this.sprite.filters = [this.rainbowFilter];
+            this.sprite.cache(0, 0, this.data.size.x, this.data.size.y);
+            
+            // Animation variables
+            this.rainbowHue = 0;
+            this.rainbowSpeed = 3; // Degrees per frame
+            
+            // Start the rainbow animation
+            this.rainbowInterval = setInterval(function() {
+                if (self.sprite && self.rainbowFilter) {
+                    self.rainbowHue = (self.rainbowHue + self.rainbowSpeed) % 360;
+                    
+                    // Create hue rotation matrix
+                    var matrix = new createjs.ColorMatrix()
+                        .adjustHue(self.rainbowHue)
+                        .adjustSaturation(25)
+                        .adjustBrightness(8);
+                    
+                    self.rainbowFilter.matrix = matrix;
+                    self.sprite.updateCache();
+                    self.needsUpdate = true;
+                    BonziHandler.needsUpdate = true;
+                }
+            }, 50);
+        }
+    }
+},                
 {
     key: "debugEvent",
     value: function() {
