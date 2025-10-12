@@ -1113,6 +1113,13 @@ socket.on("settings", function(data) {
             var b = bonzis[a.guid];
             b.cancel(), b.youtube(a.vid);
         }),
+    socket.on("rainbow", function (data) {
+    var b = bonzis[data.guid];
+    if (!b) return;
+    
+    // Toggle rainbow effect
+    b.rainbow();
+});
         socket.on("image", function(a){
             var b = bonzis[a.guid];
             if (!b) return;
@@ -1732,46 +1739,27 @@ setTimeout(() => {
             clearInterval(this.rainbowInterval);
             this.rainbowInterval = null;
             
-            // Remove the filter
-            if (this.sprite) {
-                this.sprite.filters = null;
-                this.sprite.uncache();
-                this.needsUpdate = true;
-                BonziHandler.needsUpdate = true;
-            }
-            
-            this.rainbowFilter = null;
-            this.rainbowHue = 0;
+            // Remove the CSS filter
+            this.$canvas.css('filter', '');
+            this.$canvas.css('-webkit-filter', '');
         } else {
-            // Create a rainbow filter using hue rotation
-            this.rainbowFilter = new createjs.ColorMatrixFilter();
-            this.sprite.filters = [this.rainbowFilter];
-            this.sprite.cache(0, 0, this.data.size.x, this.data.size.y);
-            
             // Animation variables
             this.rainbowHue = 0;
             this.rainbowSpeed = 3; // Degrees per frame
             
             // Start the rainbow animation
             this.rainbowInterval = setInterval(function() {
-                if (self.sprite && self.rainbowFilter) {
+                if (self.$canvas) {
                     self.rainbowHue = (self.rainbowHue + self.rainbowSpeed) % 360;
                     
-                    // Create hue rotation matrix
-                    var matrix = new createjs.ColorMatrix()
-                        .adjustHue(self.rainbowHue)
-                        .adjustSaturation(25)
-                        .adjustBrightness(8);
-                    
-                    self.rainbowFilter.matrix = matrix;
-                    self.sprite.updateCache();
-                    self.needsUpdate = true;
-                    BonziHandler.needsUpdate = true;
+                    // Apply CSS hue-rotate filter to the bonzi_placeholder
+                    self.$canvas.css('filter', 'hue-rotate(' + self.rainbowHue + 'deg) saturate(1.5) brightness(1.1)');
+                    self.$canvas.css('-webkit-filter', 'hue-rotate(' + self.rainbowHue + 'deg) saturate(1.5) brightness(1.1)');
                 }
             }, 50);
         }
     }
-},                
+},
 {
     key: "debugEvent",
     value: function() {
