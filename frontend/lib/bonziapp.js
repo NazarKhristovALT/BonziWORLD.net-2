@@ -2560,6 +2560,14 @@ value: function () {
                 { type: "anim", anim: "shrug_back", ticks: 15 },
             ],
             [
+                { type: "text", text: "Why was 6 afraid of 7?" },
+                { type: "text", text: "It was thanksgiving and 9 was the turkey" },
+            ],
+            [
+                { type: "text", text: "Why was the cinema afraid of the minecraft movie?" },
+                { type: "text", text: "Because of the 'CHICKEN JOCKEY *crowd cheering' flashbacks btw. " },
+            ],
+            [
                 {
                     type: "text",
                     text: 'Two sausages are in a pan. One looks at the other and says "Boy it\'s hot in here!" and the other sausage says "Unbelievable! It\'s a talking sausage!"',
