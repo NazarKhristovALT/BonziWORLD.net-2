@@ -9,6 +9,7 @@
     "image_whitelist": [
         "files.catbox.moe",
         "litter.catbox.moe",
+        "file.garden",
         "web.archive.org",
         "i.ibb.co",
         "media.tenor.com",
@@ -19,6 +20,7 @@
     "video_whitelist": [
         "files.catbox.moe",
         "i.ibb.co",
+        "file.garden",
         "web.archive.org",
         "media.tenor.com",
         "i.imgur.com",
