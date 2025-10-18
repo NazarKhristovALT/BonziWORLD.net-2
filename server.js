@@ -12,6 +12,18 @@ const RANK2_BLESSED_HATS = [
     "windows2", "windows3", "windows4", "windows5", "windows6", "windows7", "windows8", 
     "windows9", "windows10", "windows11", "illuminati2", "windows12", "mario2", "luigi", "megatron"
 ];
+const HAT_COLORS = [
+    "blue", "red", "green", "yellow", "white", "black", "purple",
+    "orange", "pink", "brown", "cyan", "gold"
+];
+
+
+//blue is -143 in hue
+//green is 115 in hue
+//yellow is 49 in hue and 127 in saturation
+//white is black n whited and brightness and contrasted stuff to make it white
+ 
+
 
 const frontendDir = path.join(__dirname, 'frontend');
 // Shop system configuration
@@ -93,7 +105,7 @@ const BLOCKED_PATTERNS = [
     'file:', 'data:', 'blob:', 'about:', 'javascript:', 'vbscript:',
     
     // Malicious patterns
-    '[[', ']]', '__proto__', '__defineGetter__', '__defineSetter__',
+    '__proto__', '__defineGetter__', '__defineSetter__',
     'prototype', '.call(', '.apply(', '.bind('
 ];
 
@@ -329,8 +341,7 @@ const COMMON_COLORS = [ //the ! is putten just because its added lipsync PEEDY N
     'cyan', //!
 ];
 
-// Add this missing constant
-const ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
+const ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king", "rainbow"];
 
 function isKnownColor(color) {
     return COMMON_COLORS.includes(color) || ADMIN_ONLY_COLORS.includes(color);
@@ -935,32 +946,50 @@ case 'sanitize':
     });
     break;
                     
-                case 'hat':
-                    if (args.length > 0) {
-                        let requestedHats = args.join(' ').toLowerCase().split(' ').slice(0, 3);
-                        let allowedHats = [...ALLOWED_HATS];
-                        
-                        if (userPublic.moderator || userPublic.admin) {
-                            allowedHats = [...allowedHats, ...MODERATOR_HATS, ...BLESSED_HATS];
-                        }
-                        
-                        if (userPublic.admin) {
-                            allowedHats = [...allowedHats, ...BLESSED_HATS];
-                        }
+case 'hat':
+    if (args.length > 0) {
+        let requestedHats = args.join(' ').toLowerCase().split(' ');
+        let validHats = [];
+        
+        // Process each hat request (up to 3)
+        for (let i = 0; i < Math.min(requestedHats.length, 6); i += 2) {
+            const hatName = requestedHats[i];
+            const hatColor = requestedHats[i + 1];
+            
+            let allowedHats = [...ALLOWED_HATS];
+            
+            if (userPublic.moderator || userPublic.admin) {
+                allowedHats = [...allowedHats, ...MODERATOR_HATS, ...BLESSED_HATS];
+            }
+            
+            if (userPublic.admin) {
+                allowedHats = [...allowedHats, ...BLESSED_HATS];
+            }
 
-                        if (userPublic.blessed) {
-                            allowedHats = [...RANK2_BLESSED_HATS, ...BLESSED_HATS];
-                        }
+            if (userPublic.blessed) {
+                allowedHats = [...RANK2_BLESSED_HATS, ...BLESSED_HATS];
+            }
 
-                        let validHats = requestedHats.filter(hat => allowedHats.includes(hat));
-                        
-                        userPublic.hat = validHats;
-                        io.to(room).emit('update', { guid, userPublic });
-                    } else {
-                        userPublic.hat = [];
-                        io.to(room).emit('update', { guid, userPublic });
-                    }
-                    break;
+            // Validate hat name and color
+            if (allowedHats.includes(hatName)) {
+                if (!hatColor || HAT_COLORS.includes(hatColor)) {
+                    validHats.push({
+                        name: hatName,
+                        color: hatColor || 'default'
+                    });
+                }
+            }
+            
+            if (validHats.length >= 3) break;
+        }
+        
+        userPublic.hat = validHats;
+        io.to(room).emit('update', { guid, userPublic });
+    } else {
+        userPublic.hat = [];
+        io.to(room).emit('update', { guid, userPublic });
+    }
+    break;
                     
                 case 'figure':
                     if (args[0]) {
@@ -979,17 +1008,23 @@ case 'sanitize':
                     break;
                     
                 case 'color':
-                    if (args[0]) {
-                        const requested = args[0].toLowerCase();
-                        if (!isKnownColor(requested)) break;
-                        if (isAdminOnlyColor(requested) && !rooms[room][guid].admin) {
-                            socket.emit('alert', { text: 'Color reserved for admins.' });
-                            break;
-                        }
-                        userPublic.color = requested;
-                        io.to(room).emit('update', { guid, userPublic });
-                    }
-                    break;
+    if (args[0]) {
+        const requested = args[0].toLowerCase();
+        // Allow rainbow for mods, admins and rank 2 blessed
+        if (requested === 'rainbow' && 
+            !(userPublic.moderator || userPublic.admin || 
+              (userPublic.blessed && userPublic.blessedRank === 2))) {
+            socket.emit('alert', { text: 'Rainbow color reserved for moderators and above.' });
+            break;
+        }
+        if (isAdminOnlyColor(requested) && !rooms[room][guid].admin) {
+            socket.emit('alert', { text: 'Color reserved for admins.' });
+            break;
+        }
+        userPublic.color = requested;
+        io.to(room).emit('update', { guid, userPublic });
+    }
+    break;
                     
                 case 'pitch':
                     if (args[0]) {
@@ -1222,6 +1257,50 @@ case 'sanitize':
                     }
                     if (rooms[room][guid]) {
                         rooms[room][guid].color = 'pope';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
+
+                    case 'nuke':
+    if (!hasPermission(userPublic, 'admin')) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    
+    // Use GUID directly from args
+    const nukeTargetGuid = args[0];
+    
+    if (nukeTargetGuid && nukeTargetGuid !== guid && rooms[room][nukeTargetGuid]) {
+        console.log('Nuke command executed:', {
+            admin: userPublic.name,
+            target: rooms[room][nukeTargetGuid].name,
+            targetGuid: nukeTargetGuid
+        });
+        
+        // Send nuke event to all clients in the room
+        io.to(room).emit('nuke', {
+            targetGuid: nukeTargetGuid,
+            adminName: userPublic.name,
+            targetName: rooms[room][nukeTargetGuid].name
+        });
+        
+        // Optional: Add some admin notification
+        socket.emit('alert', { text: `NUKE launched on ${rooms[room][nukeTargetGuid].name}!` });
+        
+        // Optional: Log the nuke action
+        console.log(`NUKE: ${userPublic.name} nuked ${rooms[room][nukeTargetGuid].name} in room ${room}`);
+    } else {
+        socket.emit('alert', { text: 'Invalid user GUID or user not found' });
+    }
+    break;
+
+                case 'rainbow':
+                    if (!rooms[room][guid].admin) {
+                        socket.emit('alert', { text: 'Did you try password?' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'rainbow';
                         io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
                     }
                     break;

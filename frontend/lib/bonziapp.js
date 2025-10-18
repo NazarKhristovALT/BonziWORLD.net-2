@@ -10,7 +10,7 @@ var passcode = "";
 var err = false;
 var admin = false;
 // Color configuration (easier to extend)
-var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold"]; 
+var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold", "rainbow"]; 
 var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 const ALLOWED_HATS = [
     "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police",
@@ -370,6 +370,125 @@ function closeUserInfo() {
     const infoWindow = document.getElementById("userinfo_window");
     if (infoWindow) infoWindow.remove();
 }
+function parseMarkdown(text) {
+    // First escape HTML to prevent XSS
+    text = text.replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;")
+               .replace(/"/g, "&quot;")
+               .replace(/'/g, "&#039;");
+
+    // Process rainbow syntax first - handle both single and double pair
+    // Single pair: $r$text (everything after becomes rainbow)
+    text = text.replace(/\$r\$(.*?)(?=\$r\$|$)/g, function(match, content) {
+        return "<gay-rainbow>" + content + "</gay-rainbow>";
+    });
+    
+    // Double pair: $r$text$r$ (only text between markers)
+    text = text.replace(/\$r\$(.*?)\$r\$/g, "<gay-rainbow>$1</gay-rainbow>");
+
+    // Process other markdown formatting
+    text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+               .replace(/~~(.*?)~~/g, "<em>$1</em>")
+               .replace(/__(.*?)__/g, "<u>$1</u>")
+               .replace(/--(.*?)--/g, "<del>$1</del>")
+               .replace(/\^\^(.*?)\^\^/g, "<gay-big>$1</gay-big>")
+               .replace(/\|\|(.*?)\|\|/g, "<gay-spoiler onclick=\"this.classList.add('reveal')\">$1</gay-spoiler>")
+               .replace(/``(.*?)``/g, "<gay-code>$1</gay-code>");
+
+    return text;
+}
+function addMarkdownStyles() {
+    // Check if styles are already added
+    if (document.getElementById('markdown-styles')) {
+        return;
+    }
+    
+    const style = document.createElement('style');
+    style.id = 'markdown-styles';
+    style.textContent = `
+        /* Add all the fixed CSS from above here */
+        gay-big {
+            font-size: 1.5em;
+            font-weight: bold;
+            display: inline;
+        }
+
+        gay-spoiler {
+            background-color: #2f4f4f;
+            border-radius: 3px;
+            color: transparent;
+            user-select: none;
+            transition: background-color 0.2s, color 0.2s;
+            cursor: pointer;
+            padding: 1px 4px;
+            margin: 0 1px;
+            display: inline;
+        }
+
+        gay-spoiler:hover {
+            background-color: #556666;
+        }
+
+        gay-spoiler.reveal {
+            background-color: rgba(85, 85, 85, 0.3);
+            color: inherit;
+            user-select: text;
+            cursor: text;
+        }
+
+        gay-rainbow {
+            background: linear-gradient(90deg, 
+                #ff0000, #ff8000, #ffff00, #80ff00, 
+                #00ff00, #00ff80, #00ffff, #0080ff, 
+                #0000ff, #8000ff, #ff00ff, #ff0080,
+                #ff0000);
+            background-size: 1200% 100%;
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow-move 3s linear infinite;
+            font-weight: bold;
+            display: inline;
+        }
+
+        gay-code {
+            border: 1px solid #999;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            padding: 1px 4px;
+            margin: 0 1px;
+            display: inline;
+        }
+
+        @keyframes rainbow-move {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+        /* Ensure markdown works in chat bubbles and chat log */
+        .bubble-content gay-big,
+        .bubble-content gay-spoiler, 
+        .bubble-content gay-rainbow,
+        .bubble-content gay-code,
+        .log_message_text gay-big,
+        .log_message_text gay-spoiler,
+        .log_message_text gay-rainbow,
+        .log_message_text gay-code {
+            display: inline !important;
+        }
+    `;
+    document.head.appendChild(style);
+    console.log("Markdown styles loaded");
+}
+
 // wowzar got blessed got blessed
 function showBlessmode2Window(data) {
     const existing = document.getElementById("blessmode2_window");
@@ -672,6 +791,9 @@ function bonzilog(id, name, html, color, text, single, msgid) {
     let showDelete = (admin) && msgid;
     let timeString = `<span class="log_time">${time()}</span>`;
     
+    // Parse markdown in the message
+    let formattedHtml = parseMarkdown(html);
+    
     if (thisUser !== lastUser || single) {
         chat_log_content.insertAdjacentHTML("beforeend", `
             <hr>
@@ -679,7 +801,7 @@ function bonzilog(id, name, html, color, text, single, msgid) {
                 ${icon}
                 <div class="log_message_cont">
                     <b>${name}</b> ${timeString}
-                    <div class="log_message_text">${html}</div>
+                    <div class="log_message_text">${formattedHtml}</div>
                 </div>
                 <div class="reply" onclick="socket.emit('talk',{text:'@${name} '})"></div>
                 ${showDelete ? '<div class="delete" onclick="socket.emit(\'delete\',{msgid:\'' + msgid + '\'})"></div>' : ''}
@@ -690,7 +812,7 @@ function bonzilog(id, name, html, color, text, single, msgid) {
             <div class="log_message log_continue" ${msgid ? `id="msg_${msgid}"` : ""}>
                 <div class="log_left_spacing"></div>
                 <div class="log_message_cont">
-                    <div class="log_message_text">${html}</div>
+                    <div class="log_message_text">${formattedHtml}</div>
                 </div>
                 ${showDelete ? '<div class="delete" onclick="socket.emit(\'delete\',{msgid:\'' + msgid + '\'})"></div>' : ''}
             </div>`);
@@ -1008,14 +1130,16 @@ socket.on("update", function(a) {
         bonzis[a.guid].updateHat(a.userPublic.hat);
     }
 });
-        socket.on("talk", function(data) {
+socket.on("talk", function(data) {
     var b = bonzis[data.guid];
     b.cancel();
     b.runSingleEvent([{ type: "text", text: data.text }]);
+    
+    // Use the original text for logging (markdown will be parsed in bonzilog)
     bonzilog(
         data.guid, 
         usersPublic[data.guid].name,
-        data.text, 
+        data.text,  // This will be parsed by parseMarkdown in bonzilog
         usersPublic[data.guid].color,
         data.text,
         false,
@@ -1197,11 +1321,11 @@ socket.on("settings", function(data) {
             try { showAnnouncementModal(data); } catch(e) {}
         });
         socket.on("nuke", function (data) {
-            var targetBonzi = bonzis[data.targetGuid];
-            if (targetBonzi) {
-                targetBonzi.explode();
-            }
-        });
+    var targetBonzi = bonzis[data.targetGuid];
+    if (targetBonzi) {
+        targetBonzi.explode();
+    }
+});
         socket.on('shush', function (data) {
     var b = bonzis[data.guid];
     if (!b) return;
@@ -1541,7 +1665,7 @@ $.contextMenu({
                     userinfo: {
                         name: "User Info",
                         callback: function() {
-                            socket.emit('command', { list: ["info", d.id] });
+                            socket.emit('command', { list: ["info", d.userPublic.name] });
                         }
                     },
                     admincolor: {
@@ -1558,16 +1682,14 @@ $.contextMenu({
                         callback: function () {
                             var reason = prompt("Enter ban reason:", "No reason provided");
                             if (reason !== null) {
-                                socket.emit('command', { list: ["ban", d.id, reason] });
+                                socket.emit('command', { list: ["ban", d.userPublic.name, reason] });
                             }
                         }
                     },
                     nuke: {
                         name: "Nuke User",
                         callback: function () {
-                            if (confirm("Are you sure you want to nuke this user?")) {
-                                socket.emit('command', { list: ["nuke", d.userPublic.name] });
-                            }
+                            socket.emit('command', { list: ["nuke", d.id] });
                         }
                     },
                     ultrabless: {
@@ -1595,58 +1717,50 @@ setTimeout(() => {
             _createClass(a, [
 {
     key: "updateHat",
-    value: function(hatNames) {
+    value: function(hats) {
         var self = this;
-        this.userPublic.hat = hatNames || [];
-        
-        if (!hatNames || hatNames.length === 0) {
-            this.$hat.hide().empty();
-            return;
-        }
+        this.userPublic.hat = hats || [];
         
         // Clear previous hats
         this.$hat.empty();
         
+        if (!hats || hats.length === 0) {
+            this.$hat.hide();
+            return;
+        }
+        
         // Load and display all hats (up to 3)
-        var hatsToLoad = hatNames.slice(0, 3);
         var hatsLoaded = 0;
         
-        hatsToLoad.forEach(function(hatName, index) {
-            if (loadDone.includes("hat_" + hatName)) {
-                // Hat is already loaded
-                self.$hat.append(
-                    '<div class="hat-layer" style="' +
-                    'background-image: url(\'./img/hats/' + hatName + '.webp\');' +
-                    'background-size: contain;' +
-                    'background-repeat: no-repeat;' +
-                    'background-position: center;' +
-                    'position: absolute;' +
-                    'top: 0;' +
-                    'left: 0;' +
-                    'width: 100%;' +
-                    'height: 100%;' +
-                    '"></div>'
-                );
-                hatsLoaded++;
+        hats.forEach(function(hat, index) {
+            if (hatsLoaded >= 3) return;
+            
+            const hatName = hat.name;
+            const hatColor = hat.color || 'default';
+            let hatPath;
+            
+            // Determine hat image path based on color
+            if (hatColor === 'default') {
+                hatPath = `./img/hats/${hatName}.webp`;
             } else {
-                // Load the hat
-                loadHat(hatName, function() {
-                    self.$hat.append(
-                        '<div class="hat-layer" style="' +
-                        'background-image: url(\'./img/hats/' + hatName + '.webp\');' +
-                        'background-size: contain;' +
-                        'background-repeat: no-repeat;' +
-                        'background-position: center;' +
-                        'position: absolute;' +
-                        'top: 0;' +
-                        'left: 0;' +
-                        'width: 100%;' +
-                        'height: 100%;' +
-                        '"></div>'
-                    );
-                    hatsLoaded++;
-                });
+                hatPath = `./img/hats/${hatColor}/${hatName}.webp`;
             }
+            
+            // Create hat element
+            var $hatImg = $('<div>')
+                .css({
+                    'position': 'absolute',
+                    'width': '100%',
+                    'height': '100%',
+                    'background-image': `url(${hatPath})`,
+                    'background-size': 'contain',
+                    'background-repeat': 'no-repeat',
+                    'background-position': 'center',
+                    'z-index': index + 1
+                });
+            
+            self.$hat.append($hatImg);
+            hatsLoaded++;
         });
         
         // Show the hat container if any hats were loaded
@@ -1731,32 +1845,19 @@ setTimeout(() => {
 {
     key: "rainbow",
     value: function() {
-        var self = this;
-        
-        // If rainbow is active, remove it
+        // If rainbow effect is active, remove it
         if (this.rainbowInterval) {
-            // Clear the animation interval
             clearInterval(this.rainbowInterval);
             this.rainbowInterval = null;
             
-            // Remove the CSS filter
-            this.$canvas.css('filter', '');
-            this.$canvas.css('-webkit-filter', '');
+            // Remove CSS filters
+            if (this.$canvas && this.$canvas.length > 0) {
+                this.$canvas.css('filter', '');
+                this.$canvas.css('-webkit-filter', '');
+            }
         } else {
-            // Animation variables
-            this.rainbowHue = 0;
-            this.rainbowSpeed = 3; // Degrees per frame
-            
-            // Start the rainbow animation
-            this.rainbowInterval = setInterval(function() {
-                if (self.$canvas) {
-                    self.rainbowHue = (self.rainbowHue + self.rainbowSpeed) % 360;
-                    
-                    // Apply CSS hue-rotate filter to the bonzi_placeholder
-                    self.$canvas.css('filter', 'hue-rotate(' + self.rainbowHue + 'deg) saturate(1.5) brightness(1.1)');
-                    self.$canvas.css('-webkit-filter', 'hue-rotate(' + self.rainbowHue + 'deg) saturate(1.5) brightness(1.1)');
-                }
-            }, 50);
+            // Start rainbow effect
+            this.startRainbowEffect();
         }
     }
 },
@@ -1838,6 +1939,323 @@ setTimeout(() => {
         } else {
             this.debugEventWindow.show();
         }
+    }
+},
+{
+    key: "nuke",  // Change method name to avoid conflict
+    value: function () {
+        var self = this;
+        
+        // Create explosion effect
+        this.createExplosion();
+        
+        // Apply physics to the bonzi
+        this.applyExplosionPhysics();
+        
+        // Play explosion sound
+        this.playExplosionSound();
+        
+        // Screen shake effect
+        this.screenShake(15, 800);
+    }
+},
+{
+    key: "explode",
+    value: function () {
+        var self = this;
+        
+        // Create explosion element
+        let explosion = document.createElement("div");
+        explosion.className = "explosion";
+        explosion.style.cssText = `
+            position: absolute;
+            left: ${this.x}px;
+            top: ${this.y}px;
+            width: 71px;
+            height: 101px;
+            background: url('./img/misc/explosion.png');
+            background-position: 0 0;
+            image-rendering: pixelated;
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(65px, 30px) scale(2);
+        `;
+
+        document.getElementById('content').appendChild(explosion);
+
+        // Bring bonzi above other elements
+        this.$element.css("z-index", "9999");
+        
+        // Play explosion sound
+        this.playExplosionSound();
+        
+        // Screen shake effect
+        this.screenShake(15, 800);
+
+        // Physics variables from scriptgay.js
+        var rot = 0;
+        var offsetX = 0;
+        var offsetY = 0;
+        var angvel = Math.random() * 30 + 20;
+        if (Math.random() > 0.5) angvel *= -1;
+        var xvel = Math.random() * 10 + 5;
+        if (Math.random() > 0.5) xvel *= -1;
+        var yvel = -20;
+        var i = 0;
+
+        // Remember starting position
+        var baseX = this.x;
+        var baseY = this.y;
+
+        // Animate explosion frames
+        this.animateExplosion(explosion);
+
+        var interval = setInterval(function () {
+            i++;
+            yvel += 2; // gravity
+            offsetX += xvel;
+            rot += angvel;
+            offsetY += yvel;
+
+            // Move both DOM element and sprite
+            self.move(baseX + offsetX, baseY + offsetY);
+            
+            // Rotate sprite
+            if (self.sprite) {
+                self.sprite.rotation = rot;
+            }
+            
+            // Apply transform to DOM element for additional visual effect
+            self.$element.css({
+                "transform": `translate(${offsetX}px, ${offsetY}px) rotate(${rot}deg)`,
+                "transform-origin": "center center"
+            });
+
+            // Fade out towards the end
+            if (i > 90) {
+                var opacity = (120 - i) / 30;
+                self.$element.css('opacity', opacity);
+            }
+
+            if (i > 120) {
+                clearInterval(interval);
+                // Reset everything
+                if (self.sprite) self.sprite.rotation = 0;
+                self.$element.css({
+                    "opacity": "1",
+                    "z-index": "",
+                    "transform": "",
+                    "transform-origin": ""
+                });
+                // Reset position
+                self.move(baseX, baseY);
+                
+                // Remove explosion element
+                if (explosion.parentNode) {
+                    explosion.parentNode.removeChild(explosion);
+                }
+            }
+        }, 33);
+    }
+},
+{
+    key: "createExplosion",
+    value: function () {
+        var explosion = document.createElement("div");
+        explosion.className = "explosion";
+        explosion.style.cssText = `
+            position: absolute;
+            left: ${this.x}px;
+            top: ${this.y}px;
+            width: 71px;
+            height: 101px;
+            background: url('./img/misc/explosion.png');
+            background-position: 0 0;
+            image-rendering: pixelated;
+            pointer-events: none;
+            z-index: 99999;
+            transform: translate(65px, 30px) scale(2);
+        `;
+
+        document.getElementById('content').appendChild(explosion);
+
+        // Animate explosion frames
+        this.animateExplosion(explosion);
+    }
+},
+{
+    key: "animateExplosion",
+    value: function (explosion) {
+        var frame = 0;
+        var totalFrames = 17;
+        var frameWidth = 71;
+        
+        var animate = () => {
+            if (frame >= totalFrames) {
+                // Remove explosion when done
+                if (explosion.parentNode) {
+                    explosion.parentNode.removeChild(explosion);
+                }
+                return;
+            }
+
+            // Update background position for sprite animation
+            var xOffset = -frameWidth * frame;
+            explosion.style.backgroundPosition = `${xOffset}px 0`;
+            frame++;
+
+            requestAnimationFrame(animate);
+        };
+
+        animate();
+    }
+},
+{
+    key: "applyExplosionPhysics",
+    value: function () {
+        // Bring bonzi above other elements
+        this.$element.css("z-index", "9999");
+        
+        // Reset any existing transforms
+        this.$element.css({
+            "transition": "none",
+            "transform": "",
+            "transform-origin": "center center"
+        });
+
+        // Physics variables
+        var rot = 0;
+        var offsetX = 0;
+        var offsetY = 0;
+        var angvel = Math.random() * 30 + 20;
+        if (Math.random() > 0.5) angvel *= -1;
+        var xvel = Math.random() * 10 + 5;
+        if (Math.random() > 0.5) xvel *= -1;
+        var yvel = -20;
+        
+        var frame = 0;
+        var maxFrames = 120; // ~4 seconds at 30fps
+
+        var baseX = this.x;
+        var baseY = this.y;
+
+        var interval = setInterval(() => {
+            frame++;
+            yvel += 2; // gravity
+            offsetX += xvel;
+            rot += angvel;
+            offsetY += yvel;
+
+            // Move both DOM element and sprite
+            this.move(baseX + offsetX, baseY + offsetY);
+            
+            // Rotate sprite
+            if (this.sprite) {
+                this.sprite.rotation = rot;
+            }
+
+            // Fade out towards the end
+            if (frame > 90) {
+                var opacity = (120 - frame) / 30;
+                this.$element.css('opacity', opacity);
+            }
+
+            if (frame > maxFrames) {
+                clearInterval(interval);
+                // Reset everything
+                if (this.sprite) this.sprite.rotation = 0;
+                this.$element.css({
+                    "opacity": "1",
+                    "z-index": "",
+                    "transform": "",
+                    "transform-origin": ""
+                });
+                // Reset position
+                this.move(baseX, baseY);
+            }
+        }, 33);
+    }
+},
+{
+    key: "playExplosionSound",
+    value: function () {
+        try {
+            const explosionSound = new Audio("./explosion.mp3");
+            explosionSound.volume = 0.7;
+            explosionSound.play().catch(e => {
+                console.log("Audio play failed:", e);
+                // Fallback to embedded sound
+                this.playFallbackExplosionSound();
+            });
+        } catch (error) {
+            console.log("Error playing explosion sound:", error);
+            this.playFallbackExplosionSound();
+        }
+    }
+},
+{
+    key: "playFallbackExplosionSound",
+    value: function () {
+        // Create a fallback explosion sound using Web Audio API
+        try {
+            var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            var oscillator = audioContext.createOscillator();
+            var gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
+            
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 1);
+        } catch (e) {
+            console.log("Fallback explosion sound failed:", e);
+        }
+    }
+},
+{
+    key: "screenShake",
+    value: function (intensity = 10, duration = 500) {
+        const content = document.getElementById('content');
+        if (!content) return;
+        
+        // Create shake animation
+        const shakeKeyframes = `
+            @keyframes screenShake {
+                0%, 100% { transform: translateX(0) translateY(0); }
+                10% { transform: translateX(-${intensity}px) translateY(-${intensity/2}px); }
+                20% { transform: translateX(${intensity}px) translateY(${intensity/2}px); }
+                30% { transform: translateX(-${intensity/2}px) translateY(-${intensity}px); }
+                40% { transform: translateX(${intensity/2}px) translateY(${intensity}px); }
+                50% { transform: translateX(-${intensity}px) translateY(${intensity/2}px); }
+                60% { transform: translateX(${intensity}px) translateY(-${intensity/2}px); }
+                70% { transform: translateX(-${intensity/2}px) translateY(${intensity}px); }
+                80% { transform: translateX(${intensity/2}px) translateY(-${intensity}px); }
+                90% { transform: translateX(-${intensity}px) translateY(-${intensity}px); }
+            }
+        `;
+
+        // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = shakeKeyframes;
+        document.head.appendChild(style);
+
+        // Apply animation
+        content.style.animation = `screenShake ${duration}ms ease-out`;
+        
+        // Clean up
+        setTimeout(() => {
+            content.style.animation = '';
+            if (style.parentNode) {
+                style.parentNode.removeChild(style);
+            }
+        }, duration);
     }
 },
                 {
@@ -2023,6 +2441,55 @@ setTimeout(() => {
                         this.eventNext(), this.eventQueue.unshift(c);
                     },
                 },
+                {
+key: "rainbow",
+value: function() {
+    var self = this;
+    
+    // If rainbow effect is active, remove it
+    if (this.rainbowInterval) {
+        clearInterval(this.rainbowInterval);
+        this.rainbowInterval = null;
+        
+        // Remove CSS filters
+        this.$canvas.css('filter', '');
+        this.$canvas.css('-webkit-filter', '');
+        
+        // If color is 'rainbow', keep the effect going
+        if (this.color === 'rainbow') {
+            this.startRainbowEffect();
+        }
+    } else {
+        this.startRainbowEffect();
+    }
+},
+},
+{
+    key: "startRainbowEffect",
+    value: function() {
+        var self = this;
+        
+        // Stop any existing rainbow effect first
+        if (this.rainbowInterval) {
+            clearInterval(this.rainbowInterval);
+        }
+        
+        // Animation variables  
+        this.rainbowHue = 0;
+        this.rainbowSpeed = 3; // Degrees per frame
+        
+        // Start the rainbow animation
+        this.rainbowInterval = setInterval(function() {
+            if (self.$canvas && self.$canvas.length > 0) {
+                self.rainbowHue = (self.rainbowHue + self.rainbowSpeed) % 360;
+                
+                // Apply CSS hue-rotate filter
+                self.$canvas.css('filter', 'hue-rotate(' + self.rainbowHue + 'deg) saturate(1.5) brightness(1.1)');
+                self.$canvas.css('-webkit-filter', 'hue-rotate(' + self.rainbowHue + 'deg) saturate(1.5) brightness(1.1)');
+            }
+        }, 50);
+    }
+},
 {
     key: "setupAudioAnalysis",
     value: function() {
@@ -2351,14 +2818,15 @@ value: function () {
         
         // Get the appropriate sprite sheet based on figure
         var spriteSheet;
-        if (this.figure === 'peedy' && BonziHandler.spriteSheets.peedy && BonziHandler.spriteSheets.peedy[this.color]) {
-            spriteSheet = BonziHandler.spriteSheets.peedy[this.color];
+        var baseColor = this.color === 'rainbow' ? 'purple' : this.color;
+        
+        if (this.figure === 'peedy' && BonziHandler.spriteSheets.peedy) {
+            spriteSheet = BonziHandler.spriteSheets.peedy[baseColor];
         } else {
-            // Default to bonzi if peedy not available or figure is bonzi
-            spriteSheet = BonziHandler.spriteSheets.bonzi[this.color];
+            spriteSheet = BonziHandler.spriteSheets.bonzi[baseColor];
         }
         
-        // Create new sprite starting with "idle" animation
+        // Create new sprite
         this.sprite = new createjs.Sprite(spriteSheet, "idle");
         b.addChild(this.sprite);
         
@@ -2366,10 +2834,25 @@ value: function () {
         this.colorPrev = this.color;
         this.figurePrev = this.figure;
         
+        // Start or stop rainbow effect based on color
+        if (this.color === 'rainbow') {
+            if (!this.rainbowInterval) {
+                this.startRainbowEffect();
+            }
+        } else {
+            // Stop rainbow effect and remove filters
+            if (this.rainbowInterval) {
+                clearInterval(this.rainbowInterval);
+                this.rainbowInterval = null;
+            }
+            this.$canvas.css('filter', '');
+            this.$canvas.css('-webkit-filter', '');
+        }
+        
         // Force update
         this.needsUpdate = true;
         BonziHandler.needsUpdate = true;
-    },
+    }
 },
                 {
                     key: "explode",

@@ -1062,3 +1062,115 @@ hr {
 #settings_window button:hover {
     background-color: #5a2d9c !important;
 }
+
+
+
+@keyframes explosionAnimation {
+    0% { background-position: 0 0; }
+    100% { background-position: -1207px 0; } /* 71px * 17 frames */
+}
+
+.explosion {
+    animation: explosionAnimation 1s steps(17) forwards;
+}
+
+/* Screen shake effect */
+.shake-screen {
+    animation: screenShake 0.5s;
+}
+
+
+
+
+gay-big {
+    font-size: 1.5em;
+    font-weight: bold;
+    display: inline;
+}
+
+gay-spoiler {
+    background-color: #2f4f4f;
+    border-radius: 3px;
+    color: transparent;
+    user-select: none;
+    transition: background-color 0.2s, color 0.2s;
+    cursor: pointer;
+    padding: 1px 4px;
+    margin: 0 1px;
+    display: inline;
+}
+
+gay-spoiler:hover {
+    background-color: #556666;
+}
+
+gay-spoiler.reveal {
+    background-color: rgba(85, 85, 85, 0.3);
+    color: inherit;
+    user-select: text;
+    cursor: text;
+}
+
+gay-rainbow {
+    background: linear-gradient(90deg, 
+        #ff0000, #ff8000, #ffff00, #80ff00, 
+        #00ff00, #00ff80, #00ffff, #0080ff, 
+        #0000ff, #8000ff, #ff00ff, #ff0080,
+        #ff0000);
+    background-size: 1200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: rainbow-move 3s linear infinite;
+    font-weight: bold;
+    display: inline;
+}
+
+gay-code {
+    border: 1px solid #999;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    padding: 1px 4px;
+    margin: 0 1px;
+    display: inline;
+}
+
+@keyframes rainbow-move {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Ensure markdown works in chat bubbles and chat log */
+.bubble-content gay-big,
+.bubble-content gay-spoiler, 
+.bubble-content gay-rainbow,
+.bubble-content gay-code,
+.log_message_text gay-big,
+.log_message_text gay-spoiler,
+.log_message_text gay-rainbow,
+.log_message_text gay-code {
+    display: inline !important;
+}
+
+/* Make sure text colors work in both light and dark backgrounds */
+.bubble-content gay-rainbow,
+.log_message_text gay-rainbow {
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+}
+
+/* Fix for chat log specifically */
+#chat_log_content gay-big,
+#chat_log_content gay-spoiler,
+#chat_log_content gay-rainbow,
+#chat_log_content gay-code {
+    display: inline !important;
+    vertical-align: baseline !important;
+}
