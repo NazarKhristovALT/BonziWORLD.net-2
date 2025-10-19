@@ -947,6 +947,60 @@ case 'sanitize':
     break;
                     
 case 'hat':
+    if (!args.length) {
+        // Clear all hats
+        userPublic.hat = [];
+        io.to(room).emit('update', {
+            guid: guid,
+            userPublic: userPublic
+        });
+        break;
+    }
+
+    // Parse hat requests - allow up to 3 hats
+    let requestedHats = [];
+    
+    // Loop through args taking pairs of hat name and color
+    for (let i = 0; i < Math.min(args.length, 6); i += 2) {
+        const hatName = args[i];
+        const hatColor = args[i + 1];
+
+        // Check if hat is allowed
+        let allowedHats = [...ALLOWED_HATS];
+        
+        // Add special hats for privileged users
+        if (userPublic.moderator || userPublic.admin) {
+            allowedHats = [...allowedHats, ...MODERATOR_HATS];
+        }
+        if (userPublic.admin) {
+            allowedHats = [...allowedHats, ...ADMIN_HATS];
+        }
+        if (userPublic.blessed) {
+            allowedHats = [...allowedHats, ...BLESSED_HATS];
+        }
+
+        // Validate hat name
+        if (allowedHats.includes(hatName)) {
+            // Validate color if provided
+            if (!hatColor || HAT_COLORS.includes(hatColor)) {
+                requestedHats.push({
+                    name: hatName,
+                    color: hatColor || 'default'
+                });
+            }
+        }
+        
+        // Stop after 3 valid hats
+        if (requestedHats.length >= 3) break;
+    }
+
+    // Update user's hats
+    userPublic.hat = requestedHats;
+    io.to(room).emit('update', {
+        guid: guid,
+        userPublic: userPublic
+    });
+    break;
     if (args.length > 0) {
         let requestedHats = args.join(' ').toLowerCase().split(' ');
         let validHats = [];
