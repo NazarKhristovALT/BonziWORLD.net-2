@@ -329,28 +329,11 @@ const roomPolls = {};
 // --- Replace or update the color configuration and helper functions near the top of server.js ---
 
 // Color configuration
-const COMMON_COLORS = [ //the ! is putten just because its added lipsync PEEDY NOOO MORE! :(
-    'black', //!
-    'blue', //!
-    'brown', //!
-    'green', //!
-    'purple', //!
-    'red', //!
-    'pink', //!
-    'white', //!
-    'yellow', //!
-    'orange', //!
-    'cyan', //!
-
-    //HERE MORE FROM DA SHOP
-    'coolpope',
-    'brutus',
-    'nerd'
-];
-
 const COMMON_COLORS = [
     'black', 'blue', 'brown', 'green', 'purple', 'red', 'pink',
-    'white', 'yellow', 'orange', 'cyan'
+    'white', 'yellow', 'orange', 'cyan',
+    // Additional shop colors
+    'coolpope', 'brutus', 'nerd'
 ];
 
 // New: colors reserved for moderators (mods OR admins can use)
