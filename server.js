@@ -326,6 +326,8 @@ const rooms = {};
 // Active polls per room
 const roomPolls = {};
 
+// --- Replace or update the color configuration and helper functions near the top of server.js ---
+
 // Color configuration
 const COMMON_COLORS = [ //the ! is putten just because its added lipsync PEEDY NOOO MORE! :(
     'black', //!
@@ -346,14 +348,33 @@ const COMMON_COLORS = [ //the ! is putten just because its added lipsync PEEDY N
     'nerd'
 ];
 
+const COMMON_COLORS = [
+    'black', 'blue', 'brown', 'green', 'purple', 'red', 'pink',
+    'white', 'yellow', 'orange', 'cyan'
+];
+
+// New: colors reserved for moderators (mods OR admins can use)
+const MOD_ONLY_COLORS = [
+    'dev' // add other mod-only color names here as needed
+];
+
+// Existing: colors reserved for admins only
 const ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king", "rainbow"];
 
+// Update known/permission helpers:
 function isKnownColor(color) {
-    return COMMON_COLORS.includes(color) || ADMIN_ONLY_COLORS.includes(color);
+    return COMMON_COLORS.includes(color) ||
+           MOD_ONLY_COLORS.includes(color) ||
+           ADMIN_ONLY_COLORS.includes(color);
 }
 
 function isAdminOnlyColor(color) {
     return ADMIN_ONLY_COLORS.includes(color);
+}
+
+// New helper for mod-only
+function isModOnlyColor(color) {
+    return MOD_ONLY_COLORS.includes(color);
 }
 
 function getRandomCommonColor() {
@@ -1071,20 +1092,38 @@ case 'hat':
                     }
                     break;
                     
-                case 'color':
+                // --- Update the '/color' command handler (where color changes are processed) ---
+
+case 'color':
     if (args[0]) {
         const requested = args[0].toLowerCase();
-        // Allow rainbow for mods, admins and rank 2 blessed
-        if (requested === 'rainbow' && 
-            !(userPublic.moderator || userPublic.admin || 
+
+        // Existing special-handling for rainbow (leave in place if desired)
+        if (requested === 'rainbow' &&
+            !(userPublic.moderator || userPublic.admin ||
               (userPublic.blessed && userPublic.blessedRank === 2))) {
             socket.emit('alert', { text: 'Rainbow color reserved for moderators and above.' });
             break;
         }
+
+        // Admin-only colors
         if (isAdminOnlyColor(requested) && !rooms[room][guid].admin) {
             socket.emit('alert', { text: 'Color reserved for admins.' });
             break;
         }
+
+        // Mod-only colors (mods or admins allowed)
+        if (isModOnlyColor(requested) && !(rooms[room][guid].moderator || rooms[room][guid].admin)) {
+            socket.emit('alert', { text: 'Color reserved for moderators and admins.' });
+            break;
+        }
+
+        // Known color check (optional)
+        if (!isKnownColor(requested)) {
+            socket.emit('alert', { text: 'Unknown color.' });
+            break;
+        }
+
         userPublic.color = requested;
         io.to(room).emit('update', { guid, userPublic });
     }
@@ -1530,6 +1569,11 @@ case 'hat':
                         }
                         if (isAdminOnlyColor(requestedColor) && !rooms[room][colorTargetGuid].admin) {
                             socket.emit('alert', { text: 'Color reserved for admins.' });
+                            break;
+                        }
+                        // If requestedColor is mod-only, ensure the TARGET is moderator or admin (or otherwise allowed)
+                        if (isModOnlyColor(requestedColor) && !(rooms[room][colorTargetGuid].moderator || rooms[room][colorTargetGuid].admin)) {
+                            socket.emit('alert', { text: 'Color reserved for moderators.' });
                             break;
                         }
                         rooms[room][colorTargetGuid].color = requestedColor;
