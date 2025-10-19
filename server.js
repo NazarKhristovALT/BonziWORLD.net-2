@@ -958,16 +958,17 @@ case 'hat':
             
             let allowedHats = [...ALLOWED_HATS];
             
+            // Add special hats for privileged users
             if (userPublic.moderator || userPublic.admin) {
-                allowedHats = [...allowedHats, ...MODERATOR_HATS, ...BLESSED_HATS];
+                allowedHats = [...allowedHats, ...MODERATOR_HATS];
             }
             
             if (userPublic.admin) {
-                allowedHats = [...allowedHats, ...BLESSED_HATS];
+                allowedHats = [...allowedHats, ...ADMIN_HATS];
             }
 
             if (userPublic.blessed) {
-                allowedHats = [...RANK2_BLESSED_HATS, ...BLESSED_HATS];
+                allowedHats = [...allowedHats, ...BLESSED_HATS];
             }
 
             // Validate hat name and color
@@ -980,17 +981,17 @@ case 'hat':
                 }
             }
             
-            if (validHats.length >= 3) break;
+            if (validHats.length >= 3) break; // Stop after 3 valid hats
         }
         
         userPublic.hat = validHats;
         io.to(room).emit('update', { guid, userPublic });
     } else {
+        // Remove all hats if no arguments provided
         userPublic.hat = [];
         io.to(room).emit('update', { guid, userPublic });
     }
-    break;
-                    
+    break;         
                 case 'figure':
                     if (args[0]) {
                         const figure = args[0].toLowerCase();
