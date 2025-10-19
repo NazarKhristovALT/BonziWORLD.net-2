@@ -10,8 +10,17 @@ var passcode = "";
 var err = false;
 var admin = false;
 // Color configuration (easier to extend)
-var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold", "rainbow"]; 
-var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
+// --- Update the frontend color arrays so mod-only colors are known client-side ---
+
+// Color configuration (easier to extend)
+var COMMON_COLORS = ["black","blue","brown","green","purple","red","angel","crazy","angelsupreme","pink","white","yellow","orange","cyan","clippy","jabba","jew","dress","troll","glow","noob","gold","rainbow"];
+
+var MOD_ONLY_COLORS = ["dev"]; // new - moderator-only colors (mods and admins can use)
+
+var ADMIN_ONLY_COLORS = ["pope","megatron","vitamin","death","king"];
+
+// e
+
 const ALLOWED_HATS = [
     "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police",
     "demonmask", "shirt", "tinymario", "cap", "palestine", "hiimstickman", 
@@ -33,7 +42,7 @@ const MODERATOR_HATS = [
     "police"
 ];
 var HATS_LOADED = false; 
-var ALL_COLORS = COMMON_COLORS.concat(ADMIN_ONLY_COLORS);
+var ALL_COLORS = COMMON_COLORS.concat(MOD_ONLY_COLORS, ADMIN_ONLY_COLORS);
 var quote = null;
 let lastUser = "";
 // Shared AudioContext for all Bonzi instances
