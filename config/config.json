@@ -3,6 +3,7 @@
     "moderator1_password": "scorpneverletpeedydealwithdemon",
     "moderator2_password": "stickinwithemimadudemanohgodyes",
     "moderator3_password": "takeoneshotoncemoreholycrapmega",
+    "moderator4_password": "microsoftexpandsmydongswindowso",
     "altlimit": 3,
     "namelimit": 25,
     "slowmode": 500,
@@ -30,6 +31,7 @@
     "image_blacklist": [
         "https://litter.catbox.moe/g5nhpd.jpg",
         "https://litter.catbox.moe/qw3bdi.jpg",
+        "https://files.catbox.moe/4jw8ec.jpg",
         "litter.catbox.moe/g5nhpd.jpg"
     ]
 }

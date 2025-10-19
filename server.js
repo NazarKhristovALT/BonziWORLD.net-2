@@ -339,6 +339,11 @@ const COMMON_COLORS = [ //the ! is putten just because its added lipsync PEEDY N
     'yellow', //!
     'orange', //!
     'cyan', //!
+
+    //HERE MORE FROM DA SHOP
+    'coolpope',
+    'brutus',
+    'nerd'
 ];
 
 const ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king", "rainbow"];
@@ -913,6 +918,10 @@ case 'modmode':
                 case 'asshole':
                     io.to(room).emit('asshole', { guid, target: args[0] || '' });
                     break;
+
+                    case 'bass':
+                    io.to(room).emit('bass', { guid, target: args[0] || '' });
+                    break;
                     
                 case 'owo':
                     io.to(room).emit('owo', { guid, target: args[0] || '' });
@@ -1080,6 +1089,24 @@ case 'hat':
         io.to(room).emit('update', { guid, userPublic });
     }
     break;
+    case 'skin':
+    if (args[0]) {
+        const requested = args[0].toLowerCase();
+        // Allow rainbow for mods, admins and rank 2 blessed
+        if (requested === 'rainbow' && 
+            !(userPublic.moderator || userPublic.admin || 
+              (userPublic.blessed && userPublic.blessedRank === 2))) {
+            socket.emit('alert', { text: 'Rainbow color reserved for moderators and above.' });
+            break;
+        }
+        if (isAdminOnlyColor(requested) && !rooms[room][guid].admin) {
+            socket.emit('alert', { text: 'Color reserved for admins.' });
+            break;
+        }
+        userPublic.color = requested;
+        io.to(room).emit('update', { guid, userPublic });
+    }
+    break;
                     
                 case 'pitch':
                     if (args[0]) {
@@ -1124,6 +1151,10 @@ case 'hat':
                 case 'backflip':
                     io.to(room).emit('backflip', { guid, swag: !!args[0] });
                     break;
+
+                case 'swag':
+    io.to(room).emit('swag', { guid });
+    break;
                     
                 case 'triggered':
                     io.to(room).emit('triggered', { guid });
@@ -1305,6 +1336,17 @@ case 'hat':
                     }
                     break;
                     
+                    case 'dev':
+                    if (!rooms[room][guid].moderator) {
+                        socket.emit('alert', { text: 'Did you try password?' });
+                        break;
+                    }
+                    if (rooms[room][guid]) {
+                        rooms[room][guid].color = 'dev';
+                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+                    }
+                    break;
+
                 case 'pope':
                     if (!rooms[room][guid].admin) {
                         socket.emit('alert', { text: 'Did you try password?' });

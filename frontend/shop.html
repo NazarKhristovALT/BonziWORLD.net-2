@@ -52,7 +52,7 @@
             z-index: 2;
         }
 
-        .text-content {
+        .tlogo-content {
             color: #ffa500;
             font-size: clamp(28px, 5vw, 52px);
             font-family: "Comic Sans MS", cursive, sans-serif;
@@ -62,28 +62,130 @@
             padding: 20px;
             max-width: 90%;
             animation: fadeInUp 1.5s ease-out;
+            margin-bottom: 40%;
         }
-        
+                .skin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 200px);
+            gap: 20px;
+            justify-content: center;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .skin-item {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ffa500;
+            padding: 10px;
+            cursor: pointer;
+            transition: transform 0s;
+        }
+
+        .skin-item:hover {
+            transform: scale(1.05);
+        }
+
+        .skin-preview {
+            width: 160px;
+            height: 160px;
+            margin-bottom: 10px;
+        }
+
+        .skin-title {
+            color: #ffa500;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border: 2px solid #ffa500;
+            z-index: 3;
+            color: #ffa500;
+        }
+
+        .modal-content {
+            text-align: center;
+        }
+
+        .command {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: #ffa500;
+            font-size: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="text-content">
-            <b>BonziSHOP is<br>Under Construct</b>
+        <div class="tlogo-content">
+            <b>Welcome to the BonziSHOP!</b>
+        </div>
+        <div class="skin-grid">
+            <div class="skin-item" onclick="showSkinDetails('Synthwave Pope!', 'LOOK HOW PRECIOUS HOW COOL! Everybonzi likes pope!', '/skin coolpope')">
+                <img src="./img/desktop/synthwave.png" alt="COOL POPE" class="skin-preview">
+                <div class="skin-title">Synthwave Pope!</div>
+            </div>
+            <div class="skin-item" onclick="showSkinDetails('BRUTUS', 'MEET THE DEVIL!', '/skin brutus')">
+                <img src="./img/desktop/brutus.png" alt="BRUTUS" class="skin-preview">
+                <div class="skin-title">Brutus</div>
+            </div>
+            <div class="skin-item" onclick="showSkinDetails('BonziNERD', 'Erm! Your server is really bad! I figure out to use a /color and accidentally crash the server.. TWICE!', '/skin brutus')">
+                <img src="./img/desktop/nerd.png" alt="Nerd!" class="skin-preview">
+                <div class="skin-title">BonziNERD</div>
+            </div>
+            <!-- Add more skin items here -->
+        </div>
+    </div>
+
+    <!-- Modal for skin details -->
+    <div id="skinModal" class="modal">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <div class="modal-content">
+            <h2 id="modalTitle"></h2>
+            <p id="modalDescription"></p>
+            <div class="command" id="modalCommand"></div>
         </div>
     </div>
 
     <script>
-      // Create an audio object and try to play it
-      const bgMusic = new Audio('./music/dsimenu.mp3'); // put your audio file path here
-      bgMusic.loop = true;
+        // ...existing audio code...
 
-      bgMusic.play().catch(() => {
-        // if browser blocks autoplay, start it after first click
-        document.body.addEventListener('click', () => {
-          bgMusic.play();
-        }, { once: true });
-      });
+        function showSkinDetails(title, description, command) {
+            const modal = document.getElementById('skinModal');
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalDescription').textContent = description;
+            document.getElementById('modalCommand').textContent = command;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('skinModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('skinModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>

@@ -10,7 +10,15 @@ var passcode = "";
 var err = false;
 var admin = false;
 // Color configuration (easier to extend)
-var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold", "rainbow"]; 
+var COMMON_COLORS = ["black", "blue", "brown", "green", "purple", "red", "angel", "crazy", "angelsupreme", "pink", "white", "yellow", "orange", "cyan", "clippy", "jabba", "jew", "dress", "troll", "glow", "noob", "gold", "rainbow",
+
+
+
+
+
+
+"coolpope", "brutus", "nerd"
+]; 
 var ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king"];
 const ALLOWED_HATS = [
     "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police",
@@ -1264,9 +1272,20 @@ socket.on("settings", function(data) {
             var b = bonzis[a.guid];
             b.cancel(), b.backflip(a.swag);
         }),
+        socket.on("swag", function (a) {
+    var b = bonzis[a.guid];
+    if (b) {
+        b.cancel();
+        b.swag();
+    }
+});
         socket.on("asshole", function (a) {
             var b = bonzis[a.guid];
             b.cancel(), b.asshole(a.target);
+        }),
+        socket.on("bass", function (a) {
+            var b = bonzis[a.guid];
+            b.cancel(), b.bass(a.target);
         }),
         socket.on("owo", function (a) {
             var b = bonzis[a.guid];
@@ -1496,6 +1515,12 @@ $.contextMenu({
                     socket.emit("command", { list: ["asshole", d.userPublic.name] });
                 }
             },
+            bass: {
+                name: "Call a Bass",
+                callback: function () {
+                    socket.emit("command", { list: ["bass", d.userPublic.name] });
+                }
+            },
             owo: {
                 name: "Notice Bulge",
                 callback: function () {
@@ -1510,7 +1535,15 @@ $.contextMenu({
                         socket.emit("command", { list: ["gift", d.userPublic.name, amount.trim()] });
                     }
                 }
-            }
+            },
+            "hey": {
+    name: `Hey, ${d.userPublic.name}!`,
+    callback: function() {
+        socket.emit("talk", {
+            text: `Hey, ${d.userPublic.name}!`,
+        });
+    }
+}
         };
 
         // Coin Management section
@@ -2750,6 +2783,16 @@ value: function () {
                     },
                 },
 {
+    key: "swag",
+    value: function () {
+        this.runSingleEvent([
+            { type: "anim", anim: "cool_fwd", ticks: 30 },
+            { type: "text", text: "Deal with it." },
+            { type: "idle" }
+        ]);
+    }
+},
+{
     key: "updateDialog",
     value: function () {
         var containerWidth = this.$container.width();
@@ -2794,6 +2837,12 @@ value: function () {
                     key: "asshole",
                     value: function (a) {
                         this.runSingleEvent([{ type: "text", text: "Hey, " + a + "!" }, { type: "text", text: "You're a fucking asshole!", say: "your a fucking asshole!" }, { type: "anim", anim: "grin_fwd", ticks: 15 }, { type: "idle" }]);
+                    },
+                },
+                {
+                    key: "bass",
+                    value: function (a) {
+                        this.runSingleEvent([{ type: "text", text: "Hey, " + a + "!" }, { type: "text", text: "You're a fucking bass!", say: "your a fucking bass!" }, { type: "anim", anim: "grin_fwd", ticks: 15 }, { type: "idle" }]);
                     },
                 },
                 {
