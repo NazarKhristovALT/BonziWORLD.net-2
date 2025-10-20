@@ -20,7 +20,7 @@ var COMMON_COLORS = ["black","blue","brown","green","purple","red","angel","craz
 
 
 
-"coolpope", "brutus", "nerd", "baby", "gold"
+"coolpope", "brutus", "nerd", "baby", "gold", "bugger"
 ];
 
 

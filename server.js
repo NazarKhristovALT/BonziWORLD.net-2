@@ -338,7 +338,7 @@ const COMMON_COLORS = [
 
 // Separate skin configuration
 const AVAILABLE_SKINS = [
-    'brutus', 'nerd', 'baby', 'gold'
+    'brutus', 'nerd', 'baby', 'gold', 'bugger'
 ];
 
 // Existing color configurations
