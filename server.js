@@ -118,6 +118,8 @@ let altLimit = 5; // Default connection limit per IP
 const BLACKLIST_PATH = path.join(__dirname, 'config', 'blacklist.txt');
 let imageBlacklist = [];
 
+
+
 // Load image blacklist
 function loadImageBlacklist() {
     try {
@@ -331,24 +333,32 @@ const roomPolls = {};
 // Color configuration
 const COMMON_COLORS = [
     'black', 'blue', 'brown', 'green', 'purple', 'red', 'pink',
-    'white', 'yellow', 'orange', 'cyan',
-    // Additional shop colors
-    'coolpope', 'brutus', 'nerd'
+    'white', 'yellow', 'orange', 'cyan'
 ];
 
-// New: colors reserved for moderators (mods OR admins can use)
+// Separate skin configuration
+const AVAILABLE_SKINS = [
+    'brutus', 'nerd', 'baby', 'gold'
+];
+
+// Existing color configurations
 const MOD_ONLY_COLORS = [
-    'dev' // add other mod-only color names here as needed
+    'dev'
 ];
 
-// Existing: colors reserved for admins only
-const ADMIN_ONLY_COLORS = ["pope", "megatron", "vitamin", "death", "king", "rainbow"];
+const ADMIN_ONLY_COLORS = [
+    "pope", "megatron", "vitamin", "death", "king", "rainbow"
+];
 
-// Update known/permission helpers:
+// Update helpers to separate skins
 function isKnownColor(color) {
     return COMMON_COLORS.includes(color) ||
            MOD_ONLY_COLORS.includes(color) ||
            ADMIN_ONLY_COLORS.includes(color);
+}
+
+function isKnownSkin(skin) {
+    return AVAILABLE_SKINS.includes(skin);
 }
 
 function isAdminOnlyColor(color) {
@@ -575,6 +585,32 @@ io.on('connection', (socket) => {
             return;
         }
     })
+socket.on('user_typing', function(typing) {
+    const room = socket.room;
+    const guid = socket.guid;
+    
+    if (!room || !guid || !rooms[room] || !rooms[room][guid]) return;
+    
+    // Broadcast typing status to everyone else in the room
+    socket.to(room).emit('user_typing', {
+        guid: guid,
+        name: rooms[room][guid].name,
+        typing: typing
+    });
+});
+socket.on('typing', function(isTyping) {
+    const room = socket.room;
+    const guid = socket.guid;
+    
+    if (!room || !rooms[room] || !rooms[room][guid]) return;
+    
+    // Broadcast to everyone except sender
+    socket.to(room).emit('user_typing', {
+        guid: guid,
+        name: rooms[room][guid].name,
+        typing: isTyping
+    });
+});
     
     socket.on('unban',(data) => {
         if (!checkBan(clientIp)) {
@@ -967,40 +1003,44 @@ case 'hat':
             guid: guid,
             userPublic: userPublic
         });
+        socket.emit('alert', { text: 'All hats cleared!' });
         break;
     }
 
-    // Parse hat requests - allow up to 3 hats
+    // Parse hat requests - allow up to 3 hats for everyone
     let requestedHats = [];
     
-    // Loop through args taking pairs of hat name and color
-    for (let i = 0; i < Math.min(args.length, 6); i += 2) {
-        const hatName = args[i];
-        const hatColor = args[i + 1];
+    // Check if hat is allowed for this user
+    let allowedHats = [...ALLOWED_HATS];
+    
+    // Add special hats for privileged users
+    if (userPublic.moderator || userPublic.admin) {
+        allowedHats = [...allowedHats, ...MODERATOR_HATS];
+    }
+    if (userPublic.admin) {
+        allowedHats = [...allowedHats, ...ADMIN_HATS]; 
+    }
+    if (userPublic.blessed) {
+        allowedHats = [...allowedHats, ...BLESSED_HATS];
+    }
 
-        // Check if hat is allowed
-        let allowedHats = [...ALLOWED_HATS];
+    console.log('Hat command received:', {
+        user: userPublic.name,
+        args: args,
+        allowedHats: allowedHats
+    });
+
+    // Process each hat argument
+    for (let i = 0; i < Math.min(args.length, 3); i++) {
+        const hatName = args[i].toLowerCase();
         
-        // Add special hats for privileged users
-        if (userPublic.moderator || userPublic.admin) {
-            allowedHats = [...allowedHats, ...MODERATOR_HATS];
-        }
-        if (userPublic.admin) {
-            allowedHats = [...allowedHats, ...ADMIN_HATS];
-        }
-        if (userPublic.blessed) {
-            allowedHats = [...allowedHats, ...BLESSED_HATS];
-        }
-
         // Validate hat name
         if (allowedHats.includes(hatName)) {
-            // Validate color if provided
-            if (!hatColor || HAT_COLORS.includes(hatColor)) {
-                requestedHats.push({
-                    name: hatName,
-                    color: hatColor || 'default'
-                });
-            }
+            // Add hat to the array (simple string format)
+            requestedHats.push(hatName);
+            console.log('Added hat:', hatName);
+        } else {
+            console.log('Hat not allowed:', hatName);
         }
         
         // Stop after 3 valid hats
@@ -1009,56 +1049,19 @@ case 'hat':
 
     // Update user's hats
     userPublic.hat = requestedHats;
+    
+    console.log('Final hats array:', requestedHats);
+    
     io.to(room).emit('update', {
         guid: guid,
         userPublic: userPublic
     });
-    break;
-    if (args.length > 0) {
-        let requestedHats = args.join(' ').toLowerCase().split(' ');
-        let validHats = [];
-        
-        // Process each hat request (up to 3)
-        for (let i = 0; i < Math.min(requestedHats.length, 6); i += 2) {
-            const hatName = requestedHats[i];
-            const hatColor = requestedHats[i + 1];
-            
-            let allowedHats = [...ALLOWED_HATS];
-            
-            // Add special hats for privileged users
-            if (userPublic.moderator || userPublic.admin) {
-                allowedHats = [...allowedHats, ...MODERATOR_HATS];
-            }
-            
-            if (userPublic.admin) {
-                allowedHats = [...allowedHats, ...ADMIN_HATS];
-            }
-
-            if (userPublic.blessed) {
-                allowedHats = [...allowedHats, ...BLESSED_HATS];
-            }
-
-            // Validate hat name and color
-            if (allowedHats.includes(hatName)) {
-                if (!hatColor || HAT_COLORS.includes(hatColor)) {
-                    validHats.push({
-                        name: hatName,
-                        color: hatColor || 'default'
-                    });
-                }
-            }
-            
-            if (validHats.length >= 3) break; // Stop after 3 valid hats
-        }
-        
-        userPublic.hat = validHats;
-        io.to(room).emit('update', { guid, userPublic });
+    
+    if (requestedHats.length > 0) {
     } else {
-        // Remove all hats if no arguments provided
-        userPublic.hat = [];
-        io.to(room).emit('update', { guid, userPublic });
+        socket.emit('alert', { text: 'No valid hats were applied' });
     }
-    break;         
+    break;
                 case 'figure':
                     if (args[0]) {
                         const figure = args[0].toLowerCase();
@@ -1081,11 +1084,9 @@ case 'color':
     if (args[0]) {
         const requested = args[0].toLowerCase();
 
-        // Existing special-handling for rainbow (leave in place if desired)
-        if (requested === 'rainbow' &&
-            !(userPublic.moderator || userPublic.admin ||
-              (userPublic.blessed && userPublic.blessedRank === 2))) {
-            socket.emit('alert', { text: 'Rainbow color reserved for moderators and above.' });
+        // Only check common colors and special colors
+        if (!isKnownColor(requested)) {
+            socket.emit('alert', { text: 'Unknown color. Use /skin for special skins.' });
             break;
         }
 
@@ -1095,15 +1096,9 @@ case 'color':
             break;
         }
 
-        // Mod-only colors (mods or admins allowed)
+        // Mod-only colors
         if (isModOnlyColor(requested) && !(rooms[room][guid].moderator || rooms[room][guid].admin)) {
             socket.emit('alert', { text: 'Color reserved for moderators and admins.' });
-            break;
-        }
-
-        // Known color check (optional)
-        if (!isKnownColor(requested)) {
-            socket.emit('alert', { text: 'Unknown color.' });
             break;
         }
 
@@ -1111,22 +1106,22 @@ case 'color':
         io.to(room).emit('update', { guid, userPublic });
     }
     break;
-    case 'skin':
+
+case 'skin':
     if (args[0]) {
         const requested = args[0].toLowerCase();
-        // Allow rainbow for mods, admins and rank 2 blessed
-        if (requested === 'rainbow' && 
-            !(userPublic.moderator || userPublic.admin || 
-              (userPublic.blessed && userPublic.blessedRank === 2))) {
-            socket.emit('alert', { text: 'Rainbow color reserved for moderators and above.' });
+        
+        if (!isKnownSkin(requested)) {
+            socket.emit('alert', { text: 'Unknown skin. Available skins: ' + AVAILABLE_SKINS.join(', ') });
             break;
         }
-        if (isAdminOnlyColor(requested) && !rooms[room][guid].admin) {
-            socket.emit('alert', { text: 'Color reserved for admins.' });
-            break;
-        }
+
+        // Optional: Add permission checks for specific skins if needed
         userPublic.color = requested;
         io.to(room).emit('update', { guid, userPublic });
+    } else {
+        // Show available skins when no argument is provided
+        socket.emit('alert', { text: 'Available skins: ' + AVAILABLE_SKINS.join(', ') });
     }
     break;
                     

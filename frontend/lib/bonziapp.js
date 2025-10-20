@@ -20,8 +20,9 @@ var COMMON_COLORS = ["black","blue","brown","green","purple","red","angel","craz
 
 
 
-"coolpope", "brutus", "nerd"
+"coolpope", "brutus", "nerd", "baby", "gold"
 ];
+
 
 var MOD_ONLY_COLORS = ["dev"]; // new - moderator-only colors (mods and admins can use)
 
@@ -77,6 +78,37 @@ function max(array) {
         }
     }
     return max;
+}
+function setupTyping() {
+    const input = document.getElementById('chat_message');
+    let typingTimer;
+    
+    input.addEventListener('input', function() {
+        // User is typing
+        socket.emit('user_typing', true);
+        
+        // Clear previous timer
+        clearTimeout(typingTimer);
+        
+        // Set timer to stop typing after 2 seconds
+        typingTimer = setTimeout(function() {
+            socket.emit('user_typing', false);
+        }, 2000);
+    });
+    
+    // Stop typing when message is sent
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            socket.emit('user_typing', false);
+            clearTimeout(typingTimer);
+        }
+    });
+
+    // Stop typing when message is sent via button click
+    document.getElementById('chat_send').addEventListener('click', function() {
+        socket.emit('user_typing', false);
+        clearTimeout(typingTimer);
+    });
 }
 function showSettingsWindow() {
     const existing = document.getElementById("settings_window");
@@ -255,9 +287,29 @@ function closeHatSelection() {
 }
 
 function selectHat(hat) {
+    console.log('selectHat called with:', hat);
+    
+    // Get current user data
+    const currentUser = window.usersPublic[currentUserGuid];
+    if (!currentUser) {
+        console.log('No current user found');
+        return;
+    }
+    
+    // Get current hat count
+    const currentHatCount = Array.isArray(currentUser.hat) ? currentUser.hat.length : 0;
+    
+    console.log('Current hat count:', currentHatCount);
+    
+    if (currentHatCount >= 3) {
+        alert('You can only wear 3 hats at once! Use /hat to clear existing hats first.');
+        return;
+    }
+    
+    // Send the hat command
     socket.emit('command', { list: ['hat', hat] });
+    console.log('Sent hat command for:', hat);
 }
-
 function clearHats() {
     socket.emit('command', { list: ['hat'] });
 }
@@ -1115,6 +1167,27 @@ socket.on("userInfo", function(data) {
 socket.on("coinNotification", function(data) {
     showCoinNotification(data);
 });
+socket.on('user_typing', function(data) {
+    if (!bonzis[data.guid]) return;
+    
+    const nameElement = bonzis[data.guid].$nametag;
+    if (!nameElement) return;
+    
+    if (data.typing) {
+        // Add typing indicator
+        if (!nameElement.find('.typing-indicator').length) {
+            nameElement.append('<span class="typing-indicator" style="color: #666;"> (typing...)</span>');
+        }
+    } else {
+        // Remove typing indicator
+        nameElement.find('.typing-indicator').remove();
+    }
+});
+
+// Initialize when page loads
+$(document).ready(function() {
+    setupTyping();
+});
     socket.on("rainbow", function (data) {
     var b = bonzis[data.guid];
     if (!b) return;
@@ -1760,54 +1833,62 @@ setTimeout(() => {
 {
     key: "updateHat",
     value: function(hats) {
+        console.log('updateHat called with:', hats);
         var self = this;
-        this.userPublic.hat = hats || [];
+        
+        // Ensure hats is always an array
+        this.userPublic.hat = Array.isArray(hats) ? hats : [];
         
         // Clear previous hats
         this.$hat.empty();
         
-        if (!hats || hats.length === 0) {
+        if (!this.userPublic.hat || this.userPublic.hat.length === 0) {
             this.$hat.hide();
             return;
         }
         
-        // Load and display all hats (up to 3)
-        var hatsLoaded = 0;
+        console.log('Displaying hats:', this.userPublic.hat);
         
-        hats.forEach(function(hat, index) {
-            if (hatsLoaded >= 3) return;
+        // Load and display all hats (up to 3)
+        this.userPublic.hat.forEach(function(hat, index) {
+            if (index >= 3) return;
             
-            const hatName = hat.name;
-            const hatColor = hat.color || 'default';
-            let hatPath;
+            // Handle both string and object formats
+            const hatName = typeof hat === 'string' ? hat : (hat.name || hat);
             
-            // Determine hat image path based on color
-            if (hatColor === 'default') {
-                hatPath = `./img/hats/${hatName}.webp`;
-            } else {
-                hatPath = `./img/hats/${hatColor}/${hatName}.webp`;
+            if (!hatName) {
+                console.log('Invalid hat data:', hat);
+                return;
             }
             
-            // Create hat element
-            var $hatImg = $('<div>')
+            const hatPath = `./img/hats/${hatName}.webp`;
+            
+            console.log('Creating hat element:', hatName, hatPath);
+            
+            var $hatImg = $('<img>')
+                .attr('src', hatPath)
                 .css({
                     'position': 'absolute',
                     'width': '100%',
                     'height': '100%',
-                    'background-image': `url(${hatPath})`,
-                    'background-size': 'contain',
-                    'background-repeat': 'no-repeat',
-                    'background-position': 'center',
-                    'z-index': index + 1
+                    'object-fit': 'contain',
+                    'z-index': index + 1,
+                    'pointer-events': 'none'
+                })
+                .on('error', function() {
+                    console.log('Failed to load hat image:', hatPath);
+                    $(this).remove();
                 });
             
             self.$hat.append($hatImg);
-            hatsLoaded++;
         });
         
         // Show the hat container if any hats were loaded
-        if (hatsLoaded > 0) {
+        if (this.userPublic.hat.length > 0) {
             this.$hat.show();
+            console.log('Hats displayed successfully');
+        } else {
+            this.$hat.hide();
         }
     }
 },
@@ -3457,5 +3538,28 @@ $(window).load(function () {
     document.addEventListener("touchstart", touchHandler, !0), document.addEventListener("touchmove", touchHandler, !0), document.addEventListener("touchend", touchHandler, !0), document.addEventListener("touchcancel", touchHandler, !0);
 });
 
+
+// Super simple typing setup
+let typingTimeout;
+
+$("#chat_message").on('input', function() {
+    socket.emit('typing', true);
+    
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+        socket.emit('typing', false);
+    }, 1000);
+});
+
+$("#chat_message").on('keydown', function(e) {
+    if (e.key === 'Enter') {
+        socket.emit('typing', false);
+        clearTimeout(typingTimeout);
+    }
+});
+
+
 // Thanks for watching my tutorial.
 // jim megatron
+
+
