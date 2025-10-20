@@ -20,9 +20,28 @@ var COMMON_COLORS = ["black","blue","brown","green","purple","red","angel","craz
 
 
 
-"coolpope", "brutus", "nerd", "baby", "gold", "bugger"
+"coolpope", "brutus", "nerd", "baby", "gold", "bugger", "knight",
+"dog", "crowd"
 ];
 
+const AVATAR_PARTS = {
+    head: './img/bonzi/custom/head.webp',
+    torso: './img/bonzi/custom/torso.webp', 
+    larm: './img/bonzi/custom/larm.webp',
+    rarm: './img/bonzi/custom/rarm.webp',
+    lleg: './img/bonzi/custom/lleg.webp',
+    rleg: './img/bonzi/custom/rleg.webp'
+};
+
+const DEFAULT_AVATAR = {
+    head: '#FF0000',
+    torso: '#0000FF',
+    larm: '#00FF00', 
+    rarm: '#00FF00',
+    lleg: '#0000FF',
+    rleg: '#0000FF',
+    hats: []
+};
 
 var MOD_ONLY_COLORS = ["dev"]; // new - moderator-only colors (mods and admins can use)
 
@@ -597,6 +616,7 @@ function showBlessmode2Window(data) {
                 <h3>Hats</h3>
                 <div class="roulette">
                     <div class="cardhat windows10" onclick="applyBlessedHat('windows10')"></div>
+                    <div class="cardhat opalchain" onclick="applyBlessedHat('opalchain')"></div>
                     <div class="cardhat mario2" onclick="applyBlessedHat('mario2')"></div>
                     <div class="cardhat illuminati2" onclick="applyBlessedHat('illuminati2')"></div>
                     <div class="cardhat king2" onclick="applyBlessedHat('king2')"></div>
@@ -679,10 +699,112 @@ function applyBlessedSkin(skin) {
 function applyBlessedHat(hat) {
     socket.emit('command', { list: ['hat', hat] });
 }
-
+function addAvatarEditorStyles() {
+    if (document.getElementById('avatar-editor-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'avatar-editor-styles';
+    style.textContent = `
+        .color-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        
+        .color-swatch {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .color-swatch:hover {
+            border-color: #666;
+            transform: scale(1.1);
+        }
+        
+        .color-swatch.selected {
+            border-color: #7c41c9;
+            border-width: 3px;
+            transform: scale(1.2);
+        }
+        
+        .hat-selector {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .hat-item {
+            width: 50px;
+            height: 50px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .hat-item:hover {
+            border-color: #666;
+            transform: scale(1.1);
+        }
+        
+        .hat-item.selected {
+            border-color: #7c41c9;
+            border-width: 3px;
+            transform: scale(1.2);
+        }
+        
+        .editor-section {
+            margin-bottom: 20px;
+        }
+        
+        .editor-section label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        #bonzi_preview {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background: #f0f0f0;
+            margin: 10px 0;
+        }
+        
+        #bonzi_preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    `;
+    document.head.appendChild(style);
+}
 // Use existing draggable function or create simple one
 function makeWindowDraggable(element) {
-    const header = element.querySelector('.window_header');
+    // Try different header class names
+    const header = element.querySelector('.window_header') || 
+                   element.querySelector('.window_header2') || 
+                   element.querySelector('.window_header3');
+    
+    if (!header) {
+        console.log('No draggable header found');
+        return;
+    }
+    
     let isDragging = false;
     let startX, startY, initialX, initialY;
 
@@ -707,7 +829,356 @@ function makeWindowDraggable(element) {
         isDragging = false;
     });
 }
+function showBlessmode3Window(data) {
+    const existing = document.getElementById("blessmode3_window");
+    if (existing) existing.remove();
 
+    addAvatarEditorStyles();
+
+    const editorWindow = document.createElement("div");
+    editorWindow.id = "blessmode3_window";
+    editorWindow.className = "window2";
+    editorWindow.style.cssText = "left: 236px; top: 408px; position: absolute; z-index: 10002; width: 800px; height: 600px; background: white;";
+    
+    editorWindow.innerHTML = `
+        <div class="window_header2">
+            Rank 3 RGB Avatar Editor ${data.blessedBy ? ' - Blessed by ' + data.blessedBy : ''}
+            <div class="window_close2" onclick="closeBlessmode3()" style="cursor: pointer; float: right; padding: 0 8px;">×</div>
+        </div>
+        <div class="window_body2" style="padding: 15px; height: calc(100% - 30px); overflow-y: auto;">
+            <div style="display: flex; height: 100%;">
+                <!-- Left side - Preview -->
+                <div style="flex: 1; padding: 10px; border-right: 1px solid #ccc;">
+                    <h3>Live Preview</h3>
+                    <div id="bonzi_preview" style="position: relative; width: 200px; height: 160px; background: #f0f0f0; border-radius: 8px; border: 2px solid #ccc;">
+                        <!-- Body parts will be populated by JavaScript -->
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button onclick="saveAvatar()" style="padding: 8px 16px; background: #7c41c9; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Save RGB Avatar</button>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                        <p><strong>How it works:</strong></p>
+                        <p>• Use color pickers or enter hex codes</p>
+                        <p>• Colors are applied via CSS filters</p>
+                        <p>• Works with white-based textures</p>
+                    </div>
+                </div>
+
+                <!-- Right side - RGB Controls -->
+                <div style="flex: 2; padding: 10px;">
+                    <h3>RGB Body Parts</h3>
+                    <div class="editor-section">
+                        <label>Head Color:</label>
+                        <div class="color-picker" id="head_colors"></div>
+                        
+                        <label>Torso Color:</label>
+                        <div class="color-picker" id="torso_colors"></div>
+                        
+                        <label>Left Arm Color:</label>
+                        <div class="color-picker" id="larm_colors"></div>
+                        
+                        <label>Right Arm Color:</label>
+                        <div class="color-picker" id="rarm_colors"></div>
+                        
+                        <label>Left Leg Color:</label>
+                        <div class="color-picker" id="lleg_colors"></div>
+                        
+                        <label>Right Leg Color:</label>
+                        <div class="color-picker" id="rleg_colors"></div>
+                    </div>
+
+                    <h3>Hats (Max 3)</h3>
+                    <div class="hat-selector" id="hat_selector"></div>
+                    <div id="selected_hats" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;"></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(editorWindow);
+    makeWindowDraggable(editorWindow);
+    
+    // Initialize the preview with body part images
+    initPreview();
+    // Initialize RGB color pickers
+    initColorPickers();
+    // Initialize hat selector 
+    initHatSelector();
+    
+    // Load current avatar if exists
+    loadCurrentAvatar();
+}
+
+// Add this function to initialize the preview
+function initPreview() {
+    const parts = ['head', 'torso', 'larm', 'rarm', 'lleg', 'rleg'];
+    const preview = document.getElementById('bonzi_preview');
+    
+    parts.forEach(part => {
+        const img = document.createElement('img');
+        img.id = `preview_${part}`;
+        img.src = `./img/bonzi/custom/${part}.webp`;
+        img.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;';
+        preview.appendChild(img);
+    });
+    
+    // Add hats container
+    const hatsContainer = document.createElement('div');
+    hatsContainer.id = 'preview_hats';
+    hatsContainer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
+    preview.appendChild(hatsContainer);
+}
+// Color options
+const AVATAR_COLORS = [
+    '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
+    '#800000', '#008000', '#000080', '#808000', '#800080', '#008080',
+    '#FFFFFF', '#C0C0C0', '#808080', '#000000', '#FFA500', '#A52A2A'
+];
+
+let currentAvatar = {
+    head: '#FF0000',
+    torso: '#0000FF',
+    larm: '#00FF00',
+    rarm: '#00FF00',
+    lleg: '#0000FF',
+    rleg: '#0000FF',
+    hats: []
+};
+
+function initColorPickers() {
+    const parts = ['head', 'torso', 'larm', 'rarm', 'lleg', 'rleg'];
+    
+    parts.forEach(part => {
+        const picker = document.getElementById(`${part}_colors`);
+        if (!picker) {
+            console.log('Color picker not found:', `${part}_colors`);
+            return;
+        }
+        
+        // Clear existing and create RGB color picker
+        picker.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="${part}_color_picker" value="${currentAvatar[part]}" 
+                       style="width: 50px; height: 50px;">
+                <input type="text" id="${part}_color_text" value="${currentAvatar[part]}" 
+                       style="width: 80px; padding: 5px; font-family: monospace;"
+                       onchange="updateColorFromText('${part}', this.value)">
+                <div style="width: 30px; height: 30px; background: ${currentAvatar[part]}; border: 2px solid #000;"></div>
+            </div>
+        `;
+        
+        // Add event listener for color picker
+        const colorInput = document.getElementById(`${part}_color_picker`);
+        const textInput = document.getElementById(`${part}_color_text`);
+        
+        colorInput.addEventListener('input', function() {
+            const newColor = this.value.toUpperCase();
+            currentAvatar[part] = newColor;
+            textInput.value = newColor;
+            updatePreview();
+        });
+        
+        textInput.addEventListener('input', function() {
+            const newColor = this.value.toUpperCase();
+            if (/^#[0-9A-F]{6}$/i.test(newColor)) {
+                currentAvatar[part] = newColor;
+                colorInput.value = newColor;
+                updatePreview();
+            }
+        });
+    });
+}
+
+function updateColorFromText(part, colorValue) {
+    if (/^#[0-9A-F]{6}$/i.test(colorValue)) {
+        currentAvatar[part] = colorValue.toUpperCase();
+        document.getElementById(`${part}_color_picker`).value = colorValue;
+        updatePreview();
+    }
+}
+
+// Enhanced preview update for RGB colors
+function updatePreview() {
+    const parts = ['head', 'torso', 'larm', 'rarm', 'lleg', 'rleg'];
+    
+    parts.forEach(part => {
+        const img = document.getElementById(`preview_${part}`);
+        if (img && currentAvatar[part]) {
+            // Use direct color tinting instead of complex filters
+            applyColorTint(img, currentAvatar[part]);
+        }
+    });
+
+    // Update hats preview
+    const hatsContainer = document.getElementById('preview_hats');
+    if (hatsContainer) {
+        hatsContainer.innerHTML = '';
+        currentAvatar.hats.forEach((hat, index) => {
+            const hatImg = document.createElement('img');
+            hatImg.src = `./img/hats/${hat}.webp`;
+            hatImg.style.cssText = `position: absolute; width: 100%; height: 100%; object-fit: contain; z-index: ${index + 10};`;
+            hatImg.onerror = function() {
+                this.style.display = 'none';
+                console.log('Failed to load hat:', hat);
+            };
+            hatsContainer.appendChild(hatImg);
+        });
+    }
+}
+
+// Simple color tinting using CSS filters - more predictable
+function applyColorTint(imgElement, hexColor) {
+    // Reset any existing filters
+    imgElement.style.filter = '';
+    imgElement.style.webkitFilter = '';
+    
+    // Convert hex to HSL for more predictable color manipulation
+    const hsl = hexToHSL(hexColor);
+    
+    // Apply filters based on the desired color
+    // This is a simplified approach - you may need to adjust these values
+    const filter = `
+        brightness(${getBrightnessAdjustment(hsl.l)})
+        saturate(${getSaturationAdjustment(hsl.s)})
+        hue-rotate(${hsl.h}deg)
+    `;
+    
+    imgElement.style.filter = filter;
+    imgElement.style.webkitFilter = filter;
+}
+
+// Convert hex to HSL for better color manipulation
+function hexToHSL(hex) {
+    // Remove the # if present
+    hex = hex.replace(/^#/, '');
+    
+    // Parse the hex values
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0; // achromatic
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return {
+        h: Math.round(h * 360),
+        s: Math.round(s * 100),
+        l: Math.round(l * 100)
+    };
+}
+
+function getBrightnessAdjustment(lightness) {
+    // Adjust brightness based on desired lightness
+    // You may need to tweak these values for your specific textures
+    if (lightness < 20) return 0.7;
+    if (lightness < 40) return 0.85;
+    if (lightness > 80) return 1.3;
+    if (lightness > 60) return 1.15;
+    return 1.0;
+}
+
+function getSaturationAdjustment(saturation) {
+    // Boost saturation for white base textures
+    return Math.max(1.5, saturation / 50 + 1);
+}
+
+// Helper function to convert hex color to CSS filter
+function hexToFilter(hexColor) {
+    // Convert hex to RGB
+    const r = parseInt(hexColor.slice(1, 3), 16) / 255;
+    const g = parseInt(hexColor.slice(3, 5), 16) / 255;
+    const b = parseInt(hexColor.slice(5, 7), 16) / 255;
+    
+    // This is a simplified approach - for more accurate color transformation
+    // you might need a more complex matrix calculation
+    return `sepia(1) hue-rotate(${getHueFromRGB(r, g, b)}deg) saturate(${getSaturationFromRGB(r, g, b)}) brightness(${getBrightnessFromRGB(r, g, b)})`;
+}
+
+function getHueFromRGB(r, g, b) {
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+    
+    if (max === min) {
+        h = 0;
+    } else {
+        const d = max - min;
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    
+    return Math.round(h * 360);
+}
+
+function getSaturationFromRGB(r, g, b) {
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    return max === 0 ? 0 : (max - min) / max;
+}
+
+function getBrightnessFromRGB(r, g, b) {
+    return Math.max(r, g, b);
+}
+
+function saveAvatar() {
+    // Validate avatar data
+    if (!currentAvatar || !currentAvatar.head) {
+        alert('Please configure your avatar before saving');
+        return;
+    }
+    
+    console.log('Saving avatar:', currentAvatar);
+    
+    // Send to server
+    socket.emit('command', { 
+        list: ['saveavatar', JSON.stringify(currentAvatar)]
+    });
+    
+    // Apply immediately to current bonzi
+    const currentBonzi = bonzis[currentUserGuid];
+    if (currentBonzi) {
+        currentBonzi.updateCustomAvatar(currentAvatar);
+    }
+    
+    // Close the window after a short delay- NO!
+    setTimeout(() => {
+        alert('Avatar saved successfully!');
+    }, 500);
+}
+
+function closeBlessmode3() {
+    const window = document.getElementById("blessmode3_window");
+    if (window) window.remove();
+}
+
+function loadCurrentAvatar() {
+    // Load saved avatar if it exists in userPublic
+    const room = socket.room;
+    const guid = socket.guid;
+    if (rooms[room] && rooms[room][guid] && rooms[room][guid].avatar) {
+        currentAvatar = {...rooms[room][guid].avatar};
+    }
+    updatePreview();
+    updateSelectedHats();
+}
 function updateCoinDisplay(coins) {
     let coinDisplay = document.getElementById('currency_display');
     let currencyAmount = document.getElementById('currency_amount');
@@ -1176,7 +1647,7 @@ socket.on('user_typing', function(data) {
     if (data.typing) {
         // Add typing indicator
         if (!nameElement.find('.typing-indicator').length) {
-            nameElement.append('<span class="typing-indicator" style="color: #666;"> (typing...)</span>');
+            nameElement.append('<span class="typing-indicator" style="color: #666;"> (typing)</span>');
         }
     } else {
         // Remove typing indicator
@@ -1210,6 +1681,10 @@ socket.on("update", function(a) {
     usersUpdate(), 
     BonziHandler.bonzisCheck();
     
+            if (this.customAvatar && this.needsUpdate) {
+                this.updateSpriteWithCustomColors();
+            }
+
     // Update coin display if it's the current user
     if (a.guid === currentUserGuid && a.userPublic.coins !== undefined) {
         updateCoinDisplay(a.userPublic.coins);
@@ -1312,6 +1787,13 @@ socket.on('blessmode2', function(data) {
         showBlessmode2Window(data);
     } else {
         closeBlessmode2();
+    }
+});
+socket.on('blessmode3', function(data) {
+    if (data.show) {
+        showBlessmode3Window(data);
+    } else {
+        closeBlessmode3();
     }
 });
 socket.on("settings", function(data) {
@@ -1697,6 +2179,14 @@ $.contextMenu({
                             socket.emit('command', { list: ["bless2", d.id] });
                         }
                     },
+                    /*
+                    bless3: {
+                        name: "Bless (Rank III) they do not work. its broken so i will fix it",
+                        callback: function () {
+                            socket.emit('command', { list: ["bless3", d.id] });
+                        }
+                    },
+                    */
                     changename: {
                         name: "Change Name",
                         callback: function() {
@@ -1830,6 +2320,102 @@ setTimeout(() => {
         }
         return (
             _createClass(a, [
+                {
+    key: "updateCustomAvatar",
+    value: function(avatarData) {
+        console.log('Updating custom avatar:', avatarData);
+        
+        if (!avatarData) return;
+        
+        // Store the avatar data
+        this.customAvatar = avatarData;
+        
+        // Update the sprite with custom colors
+        this.updateSpriteWithCustomColors();
+    }
+},
+{
+    key: "updateSpriteWithCustomColors",
+    value: function() {
+        if (!this.customAvatar) return;
+        
+        // Apply color filters to the sprite container
+        const parts = ['head', 'torso', 'larm', 'rarm', 'lleg', 'rleg'];
+        
+        // For now, we'll apply a simplified color effect
+        // In a more advanced implementation, you'd need separate sprites for each body part
+        if (this.customAvatar.head) {
+            this.applyColorToElement(this.$canvas, this.customAvatar.head);
+        }
+        
+        // Update hats
+        if (this.customAvatar.hats && Array.isArray(this.customAvatar.hats)) {
+            this.updateHat(this.customAvatar.hats);
+        }
+    }
+},
+{
+    key: "applyColorToElement",
+    value: function(element, hexColor) {
+        const hsl = this.hexToHSL(hexColor);
+        const filter = `
+            brightness(${this.getBrightnessAdjustment(hsl.l)})
+            saturate(${this.getSaturationAdjustment(hsl.s)})
+            hue-rotate(${hsl.h}deg)
+        `;
+        
+        element.css('filter', filter);
+        element.css('-webkit-filter', filter);
+    }
+},
+{
+    key: "hexToHSL",
+    value: function(hex) {
+        hex = hex.replace(/^#/, '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+
+        return {
+            h: Math.round(h * 360),
+            s: Math.round(s * 100),
+            l: Math.round(l * 100)
+        };
+    }
+},
+{
+    key: "getBrightnessAdjustment",
+    value: function(lightness) {
+        if (lightness < 20) return 0.7;
+        if (lightness < 40) return 0.85;
+        if (lightness > 80) return 1.3;
+        if (lightness > 60) return 1.15;
+        return 1.0;
+    }
+},
+{
+    key: "getSaturationAdjustment",
+    value: function(saturation) {
+        return Math.max(1.5, saturation / 50 + 1);
+    }
+},
 {
     key: "updateHat",
     value: function(hats) {
@@ -2797,9 +3383,9 @@ value: function () {
     }
     // Temp Owner tag (moderator2)
     else if (this.userPublic.tempowner) {
-        nameHtml += " <span style=\"background:#7c41c9;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
+        nameHtml += " <span style=\"background:#5486c3;color:#fff;border-radius:3px;padding:1px 4px;margin-left:6px;font-size:11px;vertical-align:middle;display:inline-flex;align-items:center;gap:4px;\">" +
             "<img src=\"./img/misc/admin2.png\" width=\"14\" height=\"14\" alt=\"admin2\" onerror=\"this.style.display='none'\">" +
-            "ADMIN" +
+            "DEV" +
             "<img src=\"./img/misc/admin2.png\" width=\"14\" height=\"14\" alt=\"admin2\" onerror=\"this.style.display='none'\">" +
             "</span>";
     }

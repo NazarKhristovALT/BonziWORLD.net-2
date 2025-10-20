@@ -977,6 +977,7 @@ hr {
 .megatrons { background-image: url("./img/desktop/megatrons.webp"); }
 .angelsupreme { background-image: url("./img/desktop/angelsupreme.webp"); }
 .windows2 { background-image: url("./img/hats/windows2.webp"); }
+.opalchain { background-image: url("./img/hats/opalchain.webp"); }
 .windows10 { background-image: url("./img/hats/windows10.webp"); }
 .mario2 { background-image: url("./img/hats/mario2.webp"); }
 .king2 { background-image: url("./img/hats/king2.webp"); }
@@ -1175,7 +1176,63 @@ gay-code {
     vertical-align: baseline !important;
 }
 .typing-indicator {
-    color: #888;
-    font-style: italic;
-    font-size: 0.9em;
+    color: #242424;
+}
+.color-picker {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.color-swatch {
+    width: 30px;
+    height: 30px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.color-swatch.selected {
+    border-color: #000;
+}
+
+.editor-section {
+    margin: 15px 0;
+}
+
+.editor-section label {
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: bold;
+}
+
+.hat-selector {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 10px 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.hat-item {
+    width: 75px;
+    height: 75px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: 2px solid transparent;
+    cursor: pointer;
+}
+
+.hat-item.selected {
+    border-color: #000;
+}
+
+#selected_hats {
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    min-height: 50px;
 }

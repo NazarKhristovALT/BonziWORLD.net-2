@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 80;
 const RANK2_BLESSED_HATS = [
     "windows10", "mario2", "illuminati2", "king2", "scorp", "king", "king2", "premium", "scorp", "dank", "cake", "cigar", "gangster", "illuminati", "propeller", "gamer",
     "windows2", "windows3", "windows4", "windows5", "windows6", "windows7", "windows8", 
-    "windows9", "windows10", "windows11", "illuminati2", "windows12", "mario2", "luigi", "megatron"
+    "windows9", "windows10", "windows11", "illuminati2", "windows12", "mario2", "luigi", "megatron", "opalchain"
 ];
 const HAT_COLORS = [
     "blue", "red", "green", "yellow", "white", "black", "purple",
@@ -46,14 +46,14 @@ const SHOP_ITEMS = {
 
 const ALLOWED_HATS = [
     "mario", "glitch", "speed", "trash", "tv", "hacker", "soldier", "police", 
-    "demonmask", "shirt", "tinymario", "cap", "palestine", "hiimstickman", 
+    "demonmask", "shirt", "tinymario", "cap", "palestine",
     "back", "kitty", "satan", "bull", "ballet", "scarf", "bear", "kfc", "bfdi", "bieber", 
     "bowtie", "bucket", "chain", "chef", "clippy", "cowboy", "elon", "evil", 
     "headphones", "northkorea", "horse", "kamala", "maga", "ninja", "obama", "cape",
     "pirate", "pot", "stare", "tophat", "troll", "windows", "witch", "wizard", "patrick", "plauge", "sponge", "cobby", "gun", "patrick","squiddy","mrkrabs","3dglasses","beard",
-    "gromit"
+    "gromit", // thats the shops dow here //
+    "dog", "crowd"
 ];
-
 const BLESSED_HATS = [
     "premium", "scorp", "dank", "cake", "cigar", "gangster", "illuminati", "propeller", "gamer",
     "windows2", "windows3", "windows4", "windows5", "windows6", "windows7", "windows8", 
@@ -338,7 +338,7 @@ const COMMON_COLORS = [
 
 // Separate skin configuration
 const AVAILABLE_SKINS = [
-    'brutus', 'nerd', 'baby', 'gold', 'bugger'
+    'brutus', 'nerd', 'baby', 'gold', 'bugger', 'knight'
 ];
 
 // Existing color configurations
@@ -565,7 +565,33 @@ io.on('connection', (socket) => {
         currentConnections: currentConnections + 1,
         maxConnections: altLimit
     });
+    socket.on('blessmode3', function(data) {
+    if (data.show) {
+        showBlessmode3Window(data);
+    } else {
+        closeBlessmode3();
+    }
+});
+    socket.on('update', function(a) {
+    (window.usersPublic[a.guid] = a.userPublic), 
+    usersUpdate(), 
+    BonziHandler.bonzisCheck();
     
+    // Update coin display if it's the current user
+    if (a.guid === currentUserGuid && a.userPublic.coins !== undefined) {
+        updateCoinDisplay(a.userPublic.coins);
+    }
+    
+    // Update hat if it exists
+    if (bonzis[a.guid] && a.userPublic.hat) {
+        bonzis[a.guid].updateHat(a.userPublic.hat);
+    }
+    
+    // Update custom avatar if it exists
+    if (bonzis[a.guid] && a.userPublic.avatar) {
+        bonzis[a.guid].updateCustomAvatar(a.userPublic.avatar);
+    }
+});
     socket.on('banMyself',(data) => {
         bans.push({
             ip: clientIp,
@@ -936,9 +962,8 @@ case 'modmode':
             rooms[room][guid].tempowner = false;
         } else if (args[0] === config.moderator2_password) {
             // Temp Owner role (moderator2)
-            rooms[room][guid].color = 'white';
+            rooms[room][guid].color = 'dev';
             rooms[room][guid].name = 'CHIEF STICKMAN';
-            rooms[room][guid].hat = ['hiimstickman'];
             rooms[room][guid].tempowner = true;
             rooms[room][guid].dev = false;
         } else if (args[0] === config.moderator3_password) {
@@ -1684,6 +1709,90 @@ case 'skin':
         });
     } else {
         socket.emit('alert', { text: 'Invalid user token or user not found' });
+    }
+    break;
+    // Add to server.js command handler
+case 'bless3':
+    if (!userPublic.admin) {
+        socket.emit('alert', { text: 'Admin access required' });
+        break;
+    }
+    
+    const bless3TargetGuid = args[0];
+    if (bless3TargetGuid && rooms[room][bless3TargetGuid]) {
+        rooms[room][bless3TargetGuid].blessed = true;
+        rooms[room][bless3TargetGuid].blessedRank = 3;
+        
+        // Initialize avatar data if it doesn't exist
+        if (!rooms[room][bless3TargetGuid].avatar) {
+            rooms[room][bless3TargetGuid].avatar = {
+                head: '#FF0000',
+                torso: '#0000FF', 
+                larm: '#00FF00',
+                rarm: '#00FF00',
+                lleg: '#0000FF',
+                rleg: '#0000FF',
+                hats: []
+            };
+        }
+        
+        io.to(bless3TargetGuid).emit('blessmode3', {
+            show: true,
+            blessedBy: userPublic.name
+        });
+        
+        socket.emit('alert', { text: 'BLESSED RANK III - Avatar Editor Unlocked!' });
+    }
+    break;
+case 'saveavatar':
+    try {
+        if (!rooms[room][guid].blessedRank || rooms[room][guid].blessedRank < 3) {
+            socket.emit('alert', { text: 'Rank 3 blessmode required for custom avatars' });
+            break;
+        }
+        
+        const avatarData = JSON.parse(args[0]);
+        
+        // Validate the avatar data structure
+        if (!avatarData || typeof avatarData !== 'object') {
+            socket.emit('alert', { text: 'Invalid avatar data' });
+            break;
+        }
+        
+        // Validate RGB color format for each body part
+        const bodyParts = ['head', 'torso', 'larm', 'rarm', 'lleg', 'rleg'];
+        const validColors = bodyParts.every(part => {
+            const color = avatarData[part];
+            return color && typeof color === 'string' && /^#[0-9A-F]{6}$/i.test(color);
+        });
+        
+        if (!validColors) {
+            socket.emit('alert', { text: 'Invalid color format. Use hex colors like #FF0000' });
+            break;
+        }
+        
+        // Validate hats array
+        if (!Array.isArray(avatarData.hats) || avatarData.hats.length > 3) {
+            socket.emit('alert', { text: 'Invalid hats data' });
+            break;
+        }
+        
+        // Save the avatar data
+        rooms[room][guid].avatar = avatarData;
+        
+        console.log('Avatar saved for user:', rooms[room][guid].name, avatarData);
+        
+        // Update the user for everyone - make sure avatar data is included
+        io.to(room).emit('update', {
+            guid: guid,
+            userPublic: rooms[room][guid] // This should include the avatar property
+        });
+        
+        socket.emit('alert', { text: 'Avatar saved successfully!' });
+        
+    } catch (e) {
+        console.error('Error saving avatar:', e);
+        socket.emit('alert', { text: 'Error saving avatar data: ' + e.message });
     }
     break;
 case 'bless2':
