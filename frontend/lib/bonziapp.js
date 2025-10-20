@@ -3077,58 +3077,60 @@ setTimeout(() => {
                         0 === this.event.timer && (this.$dialog.css("display", "block"), (this.event.timer = 1), this.talk(this.event.cur().text, this.event.cur().say, !0)), "none" == this.$dialog.css("display") && this.eventNext();
                     },
                 },
-                {
-                    key: "showPoll",
-                    value: function (pollId, question, yes, no) {
-                        this.activePoll = { id: pollId, yes: yes || 0, no: no || 0 };
-                        var total = (this.activePoll.yes + this.activePoll.no) || 1;
-                        var yesPct = Math.round((this.activePoll.yes / total) * 100);
-                        var noPct = 100 - yesPct;
-                        var html = "<div class='poll' style=\"width:160px;background:#eef8e6;padding:4px;border:1px solid #3a3;font-size:12px;\">" +
-                                   "<div style=\"margin-bottom:4px;color:#222;\">" + question + "</div>" +
-                                   "<div style=\"margin:3px 0;\">" +
-                                   "<div style=\"font-weight:bold;color:#060;\">Yes: <span class='poll-yes-count'>" + this.activePoll.yes + "</span></div>" +
-                                   "<div style=\"position:relative;height:12px;border:1px solid #060;background:#d7f7cf;\">" +
-                                   "<div class='poll-yes-bar' style=\"height:100%;width:" + yesPct + "%;background:#00e600;\"></div>" +
-                                   "</div>" +
-                                   "</div>" +
-                                   "<div style=\"margin:3px 0;\">" +
-                                   "<div style=\"font-weight:bold;color:#900;\">No: <span class='poll-no-count'>" + this.activePoll.no + "</span></div>" +
-                                   "<div style=\"position:relative;height:12px;border:1px solid #900;background:#f8caca;\">" +
-                                   "<div class='poll-no-bar' style=\"height:100%;width:" + noPct + "%;background:#ff0000;\"></div>" +
-                                   "</div>" +
-                                   "</div>" +
-                                   "<div style=\"display:flex;gap:4px;margin-top:4px;\">" +
-                                   "<button class='poll-vote-yes' style=\"padding:2px 6px;font-size:11px;\">Vote Yes</button>" +
-                                   "<button class='poll-vote-no' style=\"padding:2px 6px;font-size:11px;\">Vote No</button>" +
-                                   "</div>" +
-                                   "</div>";
-                        this.$dialogCont.html(html);
-                        this.$dialog.show();
-                        var self = this;
-                        this.$dialogCont.find('.poll-vote-yes').off('click').on('click', function(){
-                            socket.emit('poll_vote', { pollId: self.activePoll.id, choice: 'yes' });
-                        });
-                        this.$dialogCont.find('.poll-vote-no').off('click').on('click', function(){
-                            socket.emit('poll_vote', { pollId: self.activePoll.id, choice: 'no' });
-                        });
-                    }
-                },
-                {
-                    key: "updatePollCounts",
-                    value: function(yes, no) {
-                        if (!this.activePoll) return;
-                        this.activePoll.yes = yes;
-                        this.activePoll.no = no;
-                        var total = (yes + no) || 1;
-                        var yesPct = Math.round((yes / total) * 100);
-                        var noPct = 100 - yesPct;
-                        this.$dialogCont.find('.poll-yes-count').text(yes);
-                        this.$dialogCont.find('.poll-no-count').text(no);
-                        this.$dialogCont.find('.poll-yes-bar').css('width', yesPct + '%');
-                        this.$dialogCont.find('.poll-no-bar').css('width', noPct + '%');
-                    }
-                },
+{
+    key: "showPoll",
+    value: function (pollId, question, yes, no) {
+        // Use pollId instead of id for the active poll
+        this.activePoll = { pollId: pollId, yes: yes || 0, no: no || 0 };
+        var total = (this.activePoll.yes + this.activePoll.no) || 1;
+        var yesPct = Math.round((this.activePoll.yes / total) * 100);
+        var noPct = 100 - yesPct;
+        var html = "<div class='poll' style=\"width:160px;background:#eef8e6;padding:4px;border:1px solid #3a3;font-size:12px;\">" +
+                   "<div style=\"margin-bottom:4px;color:#222;\">" + question + "</div>" +
+                   "<div style=\"margin:3px 0;\">" +
+                   "<div style=\"font-weight:bold;color:#060;\">Yes: <span class='poll-yes-count'>" + this.activePoll.yes + "</span></div>" +
+                   "<div style=\"position:relative;height:12px;border:1px solid #060;background:#d7f7cf;\">" +
+                   "<div class='poll-yes-bar' style=\"height:100%;width:" + yesPct + "%;background:#00e600;\"></div>" +
+                   "</div>" +
+                   "</div>" +
+                   "<div style=\"margin:3px 0;\">" +
+                   "<div style=\"font-weight:bold;color:#900;\">No: <span class='poll-no-count'>" + this.activePoll.no + "</span></div>" +
+                   "<div style=\"position:relative;height:12px;border:1px solid #900;background:#f8caca;\">" +
+                   "<div class='poll-no-bar' style=\"height:100%;width:" + noPct + "%;background:#ff0000;\"></div>" +
+                   "</div>" +
+                   "</div>" +
+                   "<div style=\"display:flex;gap:4px;margin-top:4px;\">" +
+                   "<button class='poll-vote-yes' style=\"padding:2px 6px;font-size:11px;\">Vote Yes</button>" +
+                   "<button class='poll-vote-no' style=\"padding:2px 6px;font-size:11px;\">Vote No</button>" +
+                   "</div>" +
+                   "</div>";
+        this.$dialogCont.html(html);
+        this.$dialog.show();
+        var self = this;
+        // Use the pollId from activePoll
+        this.$dialogCont.find('.poll-vote-yes').off('click').on('click', function(){
+            socket.emit('poll_vote', { pollId: self.activePoll.pollId, choice: 'yes' });
+        });
+        this.$dialogCont.find('.poll-vote-no').off('click').on('click', function(){
+            socket.emit('poll_vote', { pollId: self.activePoll.pollId, choice: 'no' });
+        });
+    }
+},
+{
+    key: "updatePollCounts",
+    value: function(yes, no) {
+        if (!this.activePoll) return;
+        this.activePoll.yes = yes;
+        this.activePoll.no = no;
+        var total = (yes + no) || 1;
+        var yesPct = Math.round((yes / total) * 100);
+        var noPct = 100 - yesPct;
+        this.$dialogCont.find('.poll-yes-count').text(yes);
+        this.$dialogCont.find('.poll-no-count').text(no);
+        this.$dialogCont.find('.poll-yes-bar').css('width', yesPct + '%');
+        this.$dialogCont.find('.poll-no-bar').css('width', noPct + '%');
+    }
+},
                 {
                     key: "updateIdle",
                     value: function () {
