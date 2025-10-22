@@ -422,6 +422,7 @@ try {
 if (typeof config.moderator1_password !== 'string') config.moderator1_password = 'modpass1';
 if (typeof config.moderator2_password !== 'string') config.moderator2_password = 'modpass2';
 if (typeof config.moderator3_password !== 'string') config.moderator3_password = 'modpass3';
+if (typeof config.moderator4_password !== 'string') config.moderator3_password = 'modpass4';
         if (!Array.isArray(config.image_whitelist) || config.image_whitelist.length === 0) config.image_whitelist = DEFAULT_IMAGE_WHITELIST.slice();
         if (!Array.isArray(config.video_whitelist) || config.video_whitelist.length === 0) config.video_whitelist = DEFAULT_VIDEO_WHITELIST.slice();
         
@@ -935,6 +936,60 @@ socket.on('typing', function(isTyping) {
                     socket.emit('coinDisplay', { coins: userPublic.coins });
                     break;
                     
+case 'trusted':
+    if (!args[0]) {
+        socket.emit('alert', { text: 'Enter moderator password' });
+        break;
+    }
+    
+    // Check all three moderator passwords
+    if (args[0] !== config.moderator5_password && 
+        args[0] !== config.moderator6_password
+    ) {
+        socket.emit('alert', { text: 'Invalid moderator password' });
+        break;
+    }
+    
+    if (rooms[room][guid]) {
+        rooms[room][guid].trusted = true;
+        
+        // Different settings based on which password was used
+        if (args[0] === config.moderator1_password) {
+            // Developer role (moderator1)
+            rooms[room][guid].color = 'red';
+            rooms[room][guid].name = 'Scorp789';
+            rooms[room][guid].hat = ['scorp'];
+            rooms[room][guid].dev = true;
+            rooms[room][guid].tempowner = false;
+        } else if (args[0] === config.moderator2_password) {
+            // Temp Owner role (moderator2)
+            rooms[room][guid].color = 'dev';
+            rooms[room][guid].name = 'CHIEF STICKMAN';
+            rooms[room][guid].tempowner = true;
+            rooms[room][guid].dev = false;
+        } else if (args[0] === config.moderator3_password) {
+            // Agent Niko role (moderator3)
+            rooms[room][guid].color = 'purple';
+            rooms[room][guid].name = 'Agent Niko';
+            rooms[room][guid].hat = ['niko'];
+            rooms[room][guid].tempowner = false;
+            rooms[room][guid].dev = true;
+        }
+        else if (args[0] === config.moderator4_password) {
+            // IZHAN role (moderator4)
+            rooms[room][guid].color = 'white';
+            rooms[room][guid].name = 'Izhan';
+            rooms[room][guid].hat = ['windows'];
+            rooms[room][guid].tempowner = false;
+            rooms[room][guid].moderator = true;
+        }
+        
+        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
+        socket.emit('moderator', { moderator: true });
+    }
+    break;
+
+
 case 'modmode':
     if (!args[0]) {
         socket.emit('alert', { text: 'Enter moderator password' });
@@ -944,7 +999,9 @@ case 'modmode':
     // Check all three moderator passwords
     if (args[0] !== config.moderator1_password && 
         args[0] !== config.moderator2_password && 
-        args[0] !== config.moderator3_password) {
+        args[0] !== config.moderator3_password &&
+        args[0] !== config.moderator4_password
+    ) {
         socket.emit('alert', { text: 'Invalid moderator password' });
         break;
     }
@@ -973,6 +1030,14 @@ case 'modmode':
             rooms[room][guid].hat = ['niko'];
             rooms[room][guid].tempowner = false;
             rooms[room][guid].dev = true;
+        }
+        else if (args[0] === config.moderator4_password) {
+            // IZHAN role (moderator4)
+            rooms[room][guid].color = 'white';
+            rooms[room][guid].name = 'Izhan';
+            rooms[room][guid].hat = ['windows'];
+            rooms[room][guid].tempowner = false;
+            rooms[room][guid].moderator = true;
         }
         
         io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });

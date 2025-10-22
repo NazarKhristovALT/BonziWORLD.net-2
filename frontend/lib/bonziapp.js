@@ -2215,6 +2215,7 @@ $.contextMenu({
                             }
                         }
                     },
+                    /*
                     moduser: {
                         name: "Make Moderator",
                         callback: function() {
@@ -2231,6 +2232,7 @@ $.contextMenu({
                             }
                         }
                     }
+                    */
                 }
             };
         }
