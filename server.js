@@ -133,23 +133,28 @@ function updatePasswords() {
         const configPath = path.join(__dirname, 'config', 'config.json');
         let config = require(configPath);
         
-        // Define admin usernames
-        const admins = ['Nasr', 'Scorp', 'Stickman', 'Niko', 'Izhan'];
-        
-        // Initialize godmode_passwords object if it doesn't exist
+        // Initialize password objects
         config.godmode_passwords = {};
+        config.moderator_passwords = {};
         
-        // Generate new passwords for each admin
-        admins.forEach(admin => {
-            config.godmode_passwords[admin] = generateRandomPassword();
+        // Set admin password for Nasr only
+        config.godmode_passwords["Nasr"] = generateRandomPassword();
+        
+        // Generate moderator passwords for everyone else
+        const moderators = ['Scorp', 'Stickman', 'Niko', 'Izhan'];
+        moderators.forEach(mod => {
+            config.moderator_passwords[mod] = generateRandomPassword();
         });
         
         // Write updated config back to file
         fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
         
         console.log('New passwords generated:');
-        for (const [admin, password] of Object.entries(config.godmode_passwords)) {
-            console.log(`${admin}: ${password}`);
+        console.log('\nAdmin Password:');
+        console.log(`Nasr: ${config.godmode_passwords["Nasr"]}`);
+        console.log('\nModerator Passwords:');
+        for (const [mod, password] of Object.entries(config.moderator_passwords)) {
+            console.log(`${mod}: ${password}`);
         }
 
         return config;
@@ -697,18 +702,20 @@ socket.on('typing', function(isTyping) {
             socket.disconnect();
             return;
         }
-        if (data.godmode) {
+if (data.godmode) {
     const godmodePasswords = config.godmode_passwords;
-    const isValidGodmode = Object.values(godmodePasswords).includes(data.godmode);
+    const adminName = Object.keys(godmodePasswords).find(
+        name => godmodePasswords[name] === data.godmode
+    );
     
-    if (isValidGodmode) {
-        // Find which admin this is
-        const adminName = Object.keys(godmodePasswords).find(
-            key => godmodePasswords[key] === data.godmode
-        );
+    if (adminName) {
         userPublic.admin = true;
-        userPublic.adminName = adminName; // Store the admin name if needed
+        userPublic.name = adminName; // Set name to admin name
+        userPublic.color = 'red'; // Or any default admin color
         console.log(`Admin login: ${adminName}`);
+        
+        // Send admin status to client
+        socket.emit('admin', { admin: true });
     }
 }
         // Check for injection attempts
@@ -1046,56 +1053,44 @@ case 'modmode':
         socket.emit('alert', { text: 'Enter moderator password' });
         break;
     }
+
+    const modPasswords = config.moderator_passwords;
+    const modName = Object.keys(modPasswords).find(
+        name => modPasswords[name] === args[0]
+    );
     
-    // Check all three moderator passwords
-    if (args[0] !== config.moderator1_password && 
-        args[0] !== config.moderator2_password && 
-        args[0] !== config.moderator3_password &&
-        args[0] !== config.moderator4_password
-    ) {
-        socket.emit('alert', { text: 'Invalid moderator password' });
-        break;
-    }
-    
-    if (rooms[room][guid]) {
+    if (modName) {
         rooms[room][guid].moderator = true;
         
-        // Different settings based on which password was used
-        if (args[0] === config.moderator1_password) {
-            // Developer role (moderator1)
-            rooms[room][guid].color = 'red';
-            rooms[room][guid].name = 'Scorp789';
-            rooms[room][guid].hat = ['scorp'];
-            rooms[room][guid].dev = true;
-            rooms[room][guid].tempowner = false;
-        } else if (args[0] === config.moderator2_password) {
-            // Temp Owner role (moderator2)
-            rooms[room][guid].color = 'dev';
-            rooms[room][guid].name = 'CHIEF STICKMAN';
-            rooms[room][guid].tempowner = true;
-            rooms[room][guid].dev = false;
-        } else if (args[0] === config.moderator3_password) {
-            // Agent Niko role (moderator3)
-            rooms[room][guid].color = 'purple';
-            rooms[room][guid].name = 'Agent Niko';
-            rooms[room][guid].hat = ['niko'];
-            rooms[room][guid].tempowner = false;
-            rooms[room][guid].dev = true;
-        }
-        else if (args[0] === config.moderator4_password) {
-            // IZHAN role (moderator4)
-            rooms[room][guid].color = 'white';
-            rooms[room][guid].name = 'Izhan';
-            rooms[room][guid].hat = ['windows'];
-            rooms[room][guid].tempowner = false;
-            rooms[room][guid].moderator = true;
+        // Apply different settings based on mod name
+        switch(modName) {
+            case 'Scorp':
+                rooms[room][guid].color = 'red';
+                rooms[room][guid].name = 'Scorp789';
+                rooms[room][guid].hat = ['scorp'];
+                break;
+            case 'Stickman':
+                rooms[room][guid].color = 'dev';
+                rooms[room][guid].name = 'CHIEF STICKMAN';
+                break;
+            case 'Niko':
+                rooms[room][guid].color = 'purple';
+                rooms[room][guid].name = 'Agent Niko';
+                rooms[room][guid].hat = ['niko'];
+                break;
+            case 'Izhan':
+                rooms[room][guid].color = 'white';
+                rooms[room][guid].name = 'Izhan';
+                rooms[room][guid].hat = ['windows'];
+                break;
         }
         
         io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
         socket.emit('moderator', { moderator: true });
+    } else {
+        socket.emit('alert', { text: 'Invalid moderator password' });
     }
     break;
-
                 case 'asshole':
                     io.to(room).emit('asshole', { guid, target: args[0] || '' });
                     break;
@@ -1477,23 +1472,29 @@ case 'skin':
                         io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
                     }
                     break;
-
-                case 'godmode':
-                    if (!args[0]) {
-                        socket.emit('alert', { text: 'Did you try password?' });
-                        break;
-                    }
-                    if (args[0] !== config.godmode_password) {
-                        socket.emit('alert', { text: 'Did you try password?' });
-                        break;
-                    }
-                    if (rooms[room][guid]) {
-                        rooms[room][guid].admin = true;
-                        io.to(room).emit('update', { guid, userPublic: rooms[room][guid] });
-                        socket.emit('admin', { admin: true });
-                    }
-                    break;
-                    
+case 'godmode':
+    if (!args[0]) {
+        socket.emit('alert', { text: 'Password required' });
+        break;
+    }
+    
+    const godmodePasswords = config.godmode_passwords;
+    const adminName = Object.keys(godmodePasswords).find(
+        name => godmodePasswords[name] === args[0]
+    );
+    
+    if (adminName) {
+        userPublic.admin = true;
+        userPublic.name = adminName;
+        userPublic.color = 'red'; // Or any default admin color
+        
+        io.to(room).emit('update', { guid, userPublic: userPublic });
+        socket.emit('admin', { admin: true });
+        socket.emit('alert', { text: 'Godmode activated' });
+    } else {
+        socket.emit('alert', { text: 'Invalid password' });
+    }
+    break;
                     case 'dev':
                     if (!rooms[room][guid].moderator) {
                         socket.emit('alert', { text: 'Did you try password?' });

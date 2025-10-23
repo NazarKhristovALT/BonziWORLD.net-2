@@ -1,11 +1,4 @@
 {
-    "godmode_passwords": {
-        "Nasr": "lbeqlaxz",
-        "Scorp": "ucfjvwm",
-        "Stickman": "jquer",
-        "Niko": "qtuuadya",
-        "Izhan": "zofmwtpw"
-    },
     "altlimit": 3,
     "namelimit": 25,
     "slowmode": 500,
@@ -35,5 +28,14 @@
         "https://litter.catbox.moe/qw3bdi.jpg",
         "https://files.catbox.moe/4jw8ec.jpg",
         "litter.catbox.moe/g5nhpd.jpg"
-    ]
+    ],
+    "godmode_passwords": {
+        "Nasr": "zyjua"
+    },
+    "moderator_passwords": {
+        "Scorp": "ojwljjqg",
+        "Stickman": "aqhnw",
+        "Niko": "vydgfnzsxj",
+        "Izhan": "bqvqfsg"
+    }
 }
