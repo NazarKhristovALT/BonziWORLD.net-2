@@ -1,0 +1,38 @@
+{
+    "godmode_password": "whatcanigetforyou",
+    "moderator1_password": "scorpneverletpeedydealwithdemon",
+    "moderator2_password": "stickinwithemimadudemanohgodyes",
+    "moderator3_password": "takeoneshotoncemoreholycrapmega",
+    "moderator4_password": "microsoftexpandsmydongswindowso",
+    "moderator5_password": "gravemadmodsandbuyingblenderwin",
+    "altlimit": 3,
+    "namelimit": 25,
+    "slowmode": 500,
+    "image_whitelist": [
+        "files.catbox.moe",
+        "litter.catbox.moe",
+        "file.garden",
+        "web.archive.org",
+        "i.ibb.co",
+        "media.tenor.com",
+        "i.imgur.com",
+        "86.63.172.169",
+        "upload.bonziworld.net"
+    ],
+    "video_whitelist": [
+        "files.catbox.moe",
+        "i.ibb.co",
+        "file.garden",
+        "web.archive.org",
+        "media.tenor.com",
+        "i.imgur.com",
+        "86.63.172.169",
+        "upload.bonziworld.net"
+    ],
+    "image_blacklist": [
+        "https://litter.catbox.moe/g5nhpd.jpg",
+        "https://litter.catbox.moe/qw3bdi.jpg",
+        "https://files.catbox.moe/4jw8ec.jpg",
+        "litter.catbox.moe/g5nhpd.jpg"
+    ]
+}
