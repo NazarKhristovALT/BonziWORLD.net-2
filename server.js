@@ -18,7 +18,40 @@ const HAT_COLORS = [
     "orange", "pink", "brown", "cyan", "gold"
 ];
 
+const FLOOD_LIMIT = 10; // Max messages per FLOOD_TIME
+const FLOOD_TIME = 5000; // 5 seconds
+const MESSAGE_HISTORY = new Map(); // Track message timestamps per user
+const BLOCKED_IPS = new Set(); // Store temporarily blocked IPs
 
+// Add this function after your existing validation functions
+function isBlockedIPRange(ip) {
+    if (!ip) return true;
+    return config.blocked_ip_ranges.some(range => ip.startsWith(range));
+}
+
+function isNameBlacklisted(name) {
+    if (!name) return true;
+    return config.blacklisted_names.some(
+        banned => name.toLowerCase().includes(banned.toLowerCase())
+    );
+}
+
+function checkFlood(guid) {
+    const now = Date.now();
+    if (!MESSAGE_HISTORY.has(guid)) {
+        MESSAGE_HISTORY.set(guid, [now]);
+        return false;
+    }
+
+    const history = MESSAGE_HISTORY.get(guid);
+    // Remove old messages
+    while (history.length && history[0] < now - FLOOD_TIME) {
+        history.shift();
+    }
+    
+    history.push(now);
+    return history.length > FLOOD_LIMIT;
+}
 
 //blue is -143 in hue
 //green is 115 in hue
@@ -561,19 +594,17 @@ function isAllowedMediaUrl(rawUrl, kind) {
 
 // Enhanced connection handler with IP protection
 io.on('connection', (socket) => {
-    // Get and validate IP (like index.js)
     const clientIp = getCleanIP(socket);
-    if (!clientIp) {
-        console.log('Invalid IP address, disconnecting:', socket.handshake.address);
+    
+    // Check for blocked IP ranges
+    if (isBlockedIPRange(clientIp) || BLOCKED_IPS.has(clientIp)) {
+        console.log('Blocked IP connection attempt:', clientIp);
+        socket.emit('connectionError', {
+            code: 'IP_BLOCKED',
+            message: 'Your IP range is not allowed to connect'
+        });
         socket.disconnect();
         return;
-    }
-    
-    console.log('Connection attempt from:', clientIp, socket.id);
-    
-    // IP-based connection limiting (like index.js)
-    if (!ipConnectionCounts.has(clientIp)) {
-        ipConnectionCounts.set(clientIp, 0);
     }
     
     const currentConnections = ipConnectionCounts.get(clientIp);
@@ -699,6 +730,14 @@ socket.on('typing', function(isTyping) {
         if (!data || typeof data !== 'object' || 
             typeof data.name !== 'string' || 
             typeof data.room !== 'string') {
+            socket.disconnect();
+            return;
+        }
+                if (isNameBlacklisted(data.name)) {
+            socket.emit('loginError', {
+                code: 'NAME_BLOCKED',
+                message: 'This name is not allowed'
+            });
             socket.disconnect();
             return;
         }
@@ -2481,6 +2520,26 @@ app.get('/regenerate-passwords', (req, res) => {
         res.status(500).send('Failed to regenerate passwords');
     }
 });
+
+// Adding cleanup interval for message history
+setInterval(() => {
+    const now = Date.now();
+    for (const [guid, history] of MESSAGE_HISTORY.entries()) {
+        // Remove messages older than FLOOD_TIME
+        while (history.length && history[0] < now - FLOOD_TIME) {
+            history.shift();
+        }
+        // Remove empty histories
+        if (history.length === 0) {
+            MESSAGE_HISTORY.delete(guid);
+        }
+    }
+}, FLOOD_TIME);
+
+// Add cleanup interval for blocked IPs
+setInterval(() => {
+    BLOCKED_IPS.clear();
+}, 3600000); // Clear blocked IPs every hour
 
 // Start the server
 server.listen(PORT, () => {

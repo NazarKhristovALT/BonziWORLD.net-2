@@ -2,6 +2,16 @@
     "altlimit": 3,
     "namelimit": 25,
     "slowmode": 500,
+    "blacklisted_names": [
+        "Vineria Sprunki"
+    ],
+    "blocked_ip_ranges": [
+        "84.239.49",
+        "156.146.59",
+        "138.199.35",
+        "193.176.84",
+        "84.17.47"
+    ],
     "image_whitelist": [
         "files.catbox.moe",
         "litter.catbox.moe",
@@ -30,12 +40,12 @@
         "litter.catbox.moe/g5nhpd.jpg"
     ],
     "godmode_passwords": {
-        "Nasr": "zyjua"
+        "Nasr": "jpnzyv"
     },
     "moderator_passwords": {
-        "Scorp": "ojwljjqg",
-        "Stickman": "aqhnw",
-        "Niko": "vydgfnzsxj",
-        "Izhan": "bqvqfsg"
+        "Scorp": "zirg",
+        "Stickman": "eijipsg",
+        "Niko": "xgchtw",
+        "Izhan": "gqmkabv"
     }
 }
