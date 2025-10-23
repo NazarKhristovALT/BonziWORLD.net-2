@@ -4,6 +4,7 @@ const http = require('http');
 const socketio = require('socket.io');
 const cors = require('cors');
 const fs = require('fs');
+const crypto = require('crypto');
 const imageBlacklistPath = path.join(__dirname, 'config', 'image_blacklist.txt');
 const app = express();
 const PORT = process.env.PORT || 80;
@@ -16,6 +17,7 @@ const HAT_COLORS = [
     "blue", "red", "green", "yellow", "white", "black", "purple",
     "orange", "pink", "brown", "cyan", "gold"
 ];
+
 
 
 //blue is -143 in hue
@@ -119,7 +121,43 @@ const BLACKLIST_PATH = path.join(__dirname, 'config', 'blacklist.txt');
 let imageBlacklist = [];
 
 
+function generateRandomPassword(length = 10) {
+    return crypto.randomBytes(length)
+        .toString('base64')
+        .replace(/[^a-z]/g, '')
+        .substring(0, length);
+}
 
+function updatePasswords() {
+    try {
+        const configPath = path.join(__dirname, 'config', 'config.json');
+        let config = require(configPath);
+        
+        // Define admin usernames
+        const admins = ['Nasr', 'Scorp', 'Stickman', 'Niko', 'Izhan'];
+        
+        // Initialize godmode_passwords object if it doesn't exist
+        config.godmode_passwords = {};
+        
+        // Generate new passwords for each admin
+        admins.forEach(admin => {
+            config.godmode_passwords[admin] = generateRandomPassword();
+        });
+        
+        // Write updated config back to file
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
+        
+        console.log('New passwords generated:');
+        for (const [admin, password] of Object.entries(config.godmode_passwords)) {
+            console.log(`${admin}: ${password}`);
+        }
+
+        return config;
+    } catch (err) {
+        console.error('Error updating passwords:', err);
+        return null;
+    }
+}
 // Load image blacklist
 function loadImageBlacklist() {
     try {
@@ -659,7 +697,20 @@ socket.on('typing', function(isTyping) {
             socket.disconnect();
             return;
         }
-        
+        if (data.godmode) {
+    const godmodePasswords = config.godmode_passwords;
+    const isValidGodmode = Object.values(godmodePasswords).includes(data.godmode);
+    
+    if (isValidGodmode) {
+        // Find which admin this is
+        const adminName = Object.keys(godmodePasswords).find(
+            key => godmodePasswords[key] === data.godmode
+        );
+        userPublic.admin = true;
+        userPublic.adminName = adminName; // Store the admin name if needed
+        console.log(`Admin login: ${adminName}`);
+    }
+}
         // Check for injection attempts
         if (containsInjectionAttempt(data.name) || containsInjectionAttempt(data.room)) {
             console.log('Injection attempt detected in login:', socket.id);
@@ -2408,9 +2459,32 @@ app.get('/reload-config', (req, res) => {
     }
 });
 
+const updatedConfig = updatePasswords();
+if (updatedConfig) {
+    config = updatedConfig;
+    console.log('Passwords regenerated successfully');
+} else {
+    console.error('Failed to update passwords, using existing ones');
+}
+
+app.get('/regenerate-passwords', (req, res) => {
+    if (req.query.key !== config.godmode_password) {
+        return res.status(403).send('Forbidden');
+    }
+    
+    const updatedConfig = updatePasswords();
+    if (updatedConfig) {
+        config = updatedConfig;
+        res.send('Passwords regenerated successfully');
+    } else {
+        res.status(500).send('Failed to regenerate passwords');
+    }
+});
+
 // Start the server
 server.listen(PORT, () => {
     console.log('Server running at http://localhost:' + PORT);
     console.log('Alt limit:', altLimit);
     console.log('Blacklist words:', blacklist.length);
 });
+

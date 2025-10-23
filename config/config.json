@@ -1,10 +1,11 @@
 {
-    "godmode_password": "whatcanigetforyou",
-    "moderator1_password": "scorpneverletpeedydealwithdemon",
-    "moderator2_password": "stickinwithemimadudemanohgodyes",
-    "moderator3_password": "takeoneshotoncemoreholycrapmega",
-    "moderator4_password": "microsoftexpandsmydongswindowso",
-    "moderator5_password": "gravemadmodsandbuyingblenderwin",
+    "godmode_passwords": {
+        "Nasr": "lbeqlaxz",
+        "Scorp": "ucfjvwm",
+        "Stickman": "jquer",
+        "Niko": "qtuuadya",
+        "Izhan": "zofmwtpw"
+    },
     "altlimit": 3,
     "namelimit": 25,
     "slowmode": 500,
